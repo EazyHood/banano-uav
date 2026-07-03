@@ -58,6 +58,15 @@ def test_ortho_writes_deliverables(tmp_path):
     assert len(gj["features"]) == res.n_mats
 
 
+def test_overlap_ge_tile_is_sanitized(tmp_path):
+    # overlap >= tile no debe colgar (antes: step colapsaba a 1 -> H*W tuplas).
+    path, _, _ = _make_png(tmp_path, size=400)
+    raster = Raster(path, gsd_cm=3.0)
+    res = process_orthomosaic(raster, gsd_cm=3.0, tile=256, overlap=256)
+    raster.close()
+    assert res.n_mats >= 0
+
+
 def test_tiling_dedup_no_double_count(tmp_path):
     # Con solape, el conteo por tiles no debe inflarse respecto a un solo paso.
     path, _, n_mats = _make_png(tmp_path, size=900, seed=8)

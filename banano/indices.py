@@ -14,7 +14,9 @@ def to_rgb_float(img: np.ndarray) -> np.ndarray:
     img = np.asarray(img)
     if img.ndim == 2:
         img = np.stack([img] * 3, axis=-1)
-    if img.shape[-1] == 4:  # descarta canal alfa
+    if img.shape[-1] == 2:  # gris+alfa u otra 2-banda: usa la 1a como intensidad
+        img = np.repeat(img[..., :1], 3, axis=-1)
+    if img.shape[-1] > 3:  # descarta canal alfa / bandas extra
         img = img[..., :3]
     img = img.astype(np.float32)
     if img.max() > 1.5:

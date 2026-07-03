@@ -27,6 +27,16 @@ Primera versión pública, utilizable de punta a punta con un dron (flujo post-v
 ### Corregido
 - Umbrales de picos ahora son **robustos al tamaño del tile** (percentil/absoluto en vez de
   máximo global), evitando que un blob fuerte suprima plantas débiles en tiles grandes.
+- **GSD en CRS geográfico**: `cos(lat)` se aplicaba al promedio de resolución; ahora solo
+  escala la longitud (la latitud usa 111320 m/grado). Evita subestimar el GSD ~13% a lat 40°.
+- **Rasters de 2 bandas** (gris+alfa) ya no lanzan `IndexError`; normalización de bandas y
+  dtype (uint16/float) centralizada y determinista (no por máximo de cada tile).
+- **`overlap >= tile`** ya no cuelga el proceso (antes `step` colapsaba a 1 → H·W teselas).
+- **Teselado**: se elimina la tesela final redundante que duplicaba la cobertura de dosel.
+- **Mapa del informe**: factores de escala reales por eje (sin deriva de marcadores).
+- **`pyproject.toml`**: `setuptools>=77.0.3` (requerido por los metadatos PEP 639 de licencia).
+
+Todos verificados por una revisión adversarial multi-agente (7 bugs reales confirmados).
 
 ### Licencia
 - Publicado bajo **AGPL-3.0** para garantizar que permanezca libre y abierto.

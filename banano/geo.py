@@ -30,21 +30,55 @@ import imageio.v2 as imageio
 
 def _gsd_cm_from_dataset(ds):
     """Calcula el GSD en cm/pixel desde la resolucion del dataset y su CRS."""
-    xres = abs(ds.transform.a)
-    yres = abs(ds.transform.e)
-    res = 0.5 * (xres + yres)
+    xres = abs(ds.transform.a)  # columnas -> x (longitud si es geografico)
+    yres = abs(ds.transform.e)  # filas    -> y (latitud si es geografico)
     crs = ds.crs
     if crs is None:
         return None
     if crs.is_geographic:
-        # grados -> metros (aprox): 1 grado de latitud ~ 111320 m.
+        # grados -> metros (aprox): 1 grado de LATITUD ~ 111320 m; 1 grado de
+        # LONGITUD ~ 111320 * cos(lat). El factor cos(lat) SOLO aplica a la longitud.
         lat = ds.bounds.top - 0.5 * (ds.bounds.top - ds.bounds.bottom)
-        m_per_deg = 111320.0 * math.cos(math.radians(lat))
-        res_m = res * m_per_deg
+        xres_m = xres * 111320.0 * math.cos(math.radians(lat))
+        yres_m = yres * 111320.0
+        res_m = 0.5 * (xres_m + yres_m)
     else:
         # CRS proyectado: la resolucion ya esta en las unidades del CRS (normalmente m).
-        res_m = res
+        res_m = 0.5 * (xres + yres)
     return res_m * 100.0
+
+
+def _normalize_rgb(arr):
+    """Garantiza HxWx3 uint8 de forma DETERMINISTA (independiente del contenido).
+
+    - Canales: 1 -> repite; 2 (gris+alfa u otra) -> usa la 1a banda; >=3 -> toma 3.
+    - dtype: uint8 tal cual; uint16 -> /256; otros enteros -> escala por su maximo de
+      tipo; flotante -> asume [0,1] si max<=1, si no recorta a [0,255]. NO se normaliza
+      por el max del tile (eso haria que cada tile saliera con distinto brillo).
+    """
+    if arr.ndim == 2:
+        arr = arr[..., None]
+    c = arr.shape[-1]
+    if c == 1:
+        arr = np.repeat(arr, 3, axis=-1)
+    elif c == 2:
+        arr = np.repeat(arr[..., :1], 3, axis=-1)
+    elif c > 3:
+        arr = arr[..., :3]
+
+    if arr.dtype == np.uint8:
+        return np.ascontiguousarray(arr)
+    if arr.dtype == np.uint16:
+        return (arr // 256).astype(np.uint8)
+    if np.issubdtype(arr.dtype, np.integer):
+        info = np.iinfo(arr.dtype)
+        return (255.0 * (arr.astype(np.float64) - info.min) / (info.max - info.min)).astype(np.uint8)
+    # flotante
+    arr = arr.astype(np.float32)
+    mx = float(arr.max()) if arr.size else 1.0
+    if mx <= 1.0:
+        arr = arr * 255.0
+    return np.clip(arr, 0, 255).astype(np.uint8)
 
 
 class Raster:
@@ -104,32 +138,29 @@ class Raster:
             n = min(3, self.n_bands)
             data = self._ds.read(list(range(1, n + 1)), window=win)  # (bands, h, w)
             arr = np.moveaxis(data, 0, -1)
-            if arr.shape[-1] == 1:
-                arr = np.repeat(arr, 3, axis=-1)
-            if arr.dtype != np.uint8:
-                mx = float(arr.max()) if arr.size else 1.0
-                arr = (255.0 * arr / mx).astype(np.uint8) if mx > 0 else arr.astype(np.uint8)
-            return arr
-        return self._array[y0:y1, x0:x1]
+            return _normalize_rgb(arr)
+        return _normalize_rgb(self._array[y0:y1, x0:x1])
 
     def read_overview(self, max_side=2000):
-        """Lee una version reducida del raster completo (para el mapa del informe)."""
+        """Version reducida del raster completo (para el mapa del informe).
+
+        Devuelve (arr, sy, sx) con los factores de reduccion REALES por eje
+        (alto/ancho reales / los del overview), no un entero aproximado: asi los
+        marcadores del mapa se alinean con el fondo aunque el factor no sea entero.
+        """
         scale = max(1, int(math.ceil(max(self.height, self.width) / max_side)))
-        oh, ow = self.height // scale, self.width // scale
         if self.has_geo:
+            oh, ow = max(1, self.height // scale), max(1, self.width // scale)
             data = self._ds.read(
                 list(range(1, min(3, self.n_bands) + 1)),
                 out_shape=(min(3, self.n_bands), oh, ow),
             )
-            arr = np.moveaxis(data, 0, -1)
-            if arr.shape[-1] == 1:
-                arr = np.repeat(arr, 3, axis=-1)
-            if arr.dtype != np.uint8:
-                mx = float(arr.max()) if arr.size else 1.0
-                arr = (255.0 * arr / mx).astype(np.uint8) if mx > 0 else arr.astype(np.uint8)
+            arr = _normalize_rgb(np.moveaxis(data, 0, -1))
         else:
-            arr = self._array[::scale, ::scale]
-        return arr, scale
+            arr = _normalize_rgb(self._array[::scale, ::scale])
+        sy = self.height / arr.shape[0]
+        sx = self.width / arr.shape[1]
+        return arr, sy, sx
 
     def pixel_to_lonlat(self, rows, cols):
         """Convierte (fila, columna) a (lon, lat) en EPSG:4326. None si no hay geo."""

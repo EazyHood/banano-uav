@@ -80,6 +80,23 @@ def _dedup(pts, dist):
     return np.array(kept, dtype=float)
 
 
+def _tile_starts(total, tile, step):
+    """Posiciones de inicio de tile a lo largo de un eje.
+
+    Se detiene en cuanto un tile alcanza el borde, de modo que NUNCA emite una
+    tesela final redundante (dos tiles cuyo nucleo llega al mismo borde), lo que
+    duplicaria el conteo de cobertura en la banda solapada.
+    """
+    starts = []
+    y = 0
+    while True:
+        starts.append(y)
+        if y + tile >= total:
+            break
+        y += step
+    return starts
+
+
 def process_orthomosaic(
     raster,
     gsd_cm=None,
@@ -93,9 +110,17 @@ def process_orthomosaic(
     """Procesa un objeto Raster completo y devuelve un OrthoResult."""
     H, W = raster.shape
     gsd = gsd_cm if gsd_cm else raster.gsd_cm
-    step = max(1, tile - overlap)
 
-    coords = [(y, x) for y in range(0, H, step) for x in range(0, W, step)]
+    # saneo de parametros: tile valido y solape estricto menor que el tile
+    tile = max(32, int(tile))
+    overlap = int(overlap)
+    if overlap < 0:
+        overlap = 0
+    if overlap >= tile:
+        overlap = tile // 2
+    step = tile - overlap
+
+    coords = [(y, x) for y in _tile_starts(H, tile, step) for x in _tile_starts(W, tile, step)]
     all_pts = []
     canopy_px = 0
     core_px = 0

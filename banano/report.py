@@ -66,21 +66,24 @@ def write_geojson(path, result):
     return path
 
 
-def render_map(path, overview_img, scale, result, title=None):
-    """Mapa: overview del ortomosaico con macollas (circulos) y pseudotallos (puntos)."""
+def render_map(path, overview_img, sy, sx, result, title=None):
+    """Mapa: overview del ortomosaico con macollas (circulos) y pseudotallos (puntos).
+
+    sy, sx = factores de reduccion reales por eje (fila, columna) del overview.
+    """
     fig, ax = plt.subplots(figsize=(12, 12))
     ax.imshow(overview_img)
 
-    mat_r = max(4, (result.params.get("mat_eps_px", 20) / scale))
+    mat_r = max(4, (result.params.get("mat_eps_px", 20) / (0.5 * (sy + sx))))
     for m in result.mats:
         cy, cx = m["centroid"]
         ax.add_patch(
-            Circle((cx / scale, cy / scale), mat_r, fill=False, edgecolor="yellow", lw=0.8)
+            Circle((cx / sx, cy / sy), mat_r, fill=False, edgecolor="yellow", lw=0.8)
         )
     if result.n_pseudostems:
         ax.scatter(
-            result.pseudostems_px[:, 1] / scale,
-            result.pseudostems_px[:, 0] / scale,
+            result.pseudostems_px[:, 1] / sx,
+            result.pseudostems_px[:, 0] / sy,
             s=6,
             c="red",
             marker=".",
@@ -161,8 +164,8 @@ def write_all(outdir, result, raster=None, input_name=""):
 
     map_png = None
     if raster is not None:
-        overview, scale = raster.read_overview()
-        map_png = render_map(os.path.join(outdir, "mapa.png"), overview, scale, result)
+        overview, sy, sx = raster.read_overview()
+        map_png = render_map(os.path.join(outdir, "mapa.png"), overview, sy, sx, result)
         paths["mapa"] = map_png
 
     paths["html"] = write_html(
