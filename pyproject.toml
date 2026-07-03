@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE"]
-authors = [{ name = "jhona" }]
+authors = [{ name = "EazyHood" }]
 keywords = ["banana", "banano", "drone", "uav", "remote-sensing", "agriculture", "precision-agriculture", "orthomosaic"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -35,8 +35,8 @@ deep = ["ultralytics>=8.1"]
 dev = ["pytest>=7.0"]
 
 [project.urls]
-Homepage = "https://github.com/jhona/banano-drone"
-Issues = "https://github.com/jhona/banano-drone/issues"
+Homepage = "https://github.com/EazyHood/banano-uav"
+Issues = "https://github.com/EazyHood/banano-uav/issues"
 
 [project.scripts]
 banano-detect = "banano.cli:main"

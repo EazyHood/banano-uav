@@ -5,8 +5,8 @@
 ## Cómo empezar
 
 ```bash
-git clone https://github.com/jhona/banano-drone
-cd banano-drone
+git clone https://github.com/EazyHood/banano-uav
+cd banano-uav
 python -m venv .venv && source .venv/Scripts/activate   # o .venv\Scripts\Activate.ps1
 pip install -e .[geo,dev]
 pytest            # deben pasar todas las pruebas

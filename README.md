@@ -42,8 +42,8 @@ dosel**, y una **capa GIS georreferenciada** que abres en QGIS/Google Earth.
 ## Instalación
 
 ```bash
-git clone https://github.com/jhona/banano-drone
-cd banano-drone
+git clone https://github.com/EazyHood/banano-uav
+cd banano-uav
 python -m venv .venv
 # Windows PowerShell:  .venv\Scripts\Activate.ps1   |   Git Bash: source .venv/Scripts/activate
 pip install -e .[geo]      # [geo] añade soporte GeoTIFF (rasterio); sin él usa imágenes normales
