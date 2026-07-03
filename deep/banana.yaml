@@ -1,0 +1,14 @@
+# Configuracion de dataset para YOLOv8 (segmentacion de instancias).
+# Estructura esperada:
+#   dataset/images/train, dataset/images/val
+#   dataset/labels/train, dataset/labels/val   (formato YOLO-seg: polígonos)
+#
+# Anota macollas y/o pseudotallos con Roboflow, CVAT o Label Studio y exporta a
+# formato YOLOv8. Ajusta 'path' a la ruta absoluta de tu dataset.
+path: ./dataset
+train: images/train
+val: images/val
+
+names:
+  0: macolla        # cluster de banano (unidad agronomica recomendada)
+  1: pseudotallo    # planta individual (opcional, mas dificil de anotar)

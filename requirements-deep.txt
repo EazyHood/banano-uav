@@ -1,0 +1,5 @@
+# Dependencias opcionales para el camino de deep learning (produccion).
+# Instalar solo si vas a entrenar/usar YOLOv8-seg con tiles etiquetados.
+ultralytics>=8.1
+# torch se instala automaticamente con ultralytics; para GPU usar la rueda CUDA
+# desde https://pytorch.org/get-started/locally/
