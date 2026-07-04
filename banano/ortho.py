@@ -178,7 +178,12 @@ def process_orthomosaic(
     if config.model_weights:
         from .model import BananaModel
 
-        model = BananaModel(config.model_weights, conf=config.model_conf, imgsz=min(tile, 1280))
+        model = BananaModel(
+            config.model_weights,
+            conf=config.model_conf,
+            imgsz=min(tile, 1280),
+            augment=config.model_augment,
+        )
         logger.info("Usando modelo YOLOv8-seg: %s", config.model_weights)
 
     coords = [(y, x) for y in _tile_starts(H, tile, step) for x in _tile_starts(W, tile, step)]

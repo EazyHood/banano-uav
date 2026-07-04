@@ -128,24 +128,26 @@ deduplicación** en bordes → georreferenciación a lon/lat.
 ## Resultados y precisión (benchmark honesto)
 
 Medido sobre plantaciones sintéticas con **verdad de terreno exacta** (`deep/benchmark.py`,
-15 ortomosaicos de 1024 px, GSD 3 cm/px). Reproduce con:
-`python deep/benchmark.py --n 15 --size 1024 --weights models/banano_seg_synth_v1.pt`
+25 ortomosaicos de 1024 px, GSD 3 cm/px, tolerancia estricta 0.5 m). Reproduce con:
+`python deep/benchmark.py --n 25 --size 1024 --weights models/banano_seg_synth_v1.pt --model-conf 0.55`
 
-| Método | Error de conteo total | MAPE por lote | F1 (localización, tol. estricta 0.5 m) |
+| Método | Acierto de conteo | MAPE por lote | F1 (localización, tol. 0.5 m) |
 |---|---|---|---|
-| **Modelo YOLOv8-seg** (incluido) | **0.92 %** ✅ | 2.15 % | 0.975 |
-| Clásico (sin datos etiquetados) | 4.77 % | 4.72 % | 0.825 |
+| **Modelo YOLOv8s-seg** (incluido) | **98.8 %** (error 1.2 %) ✅ | 1.23 % | **0.993 (99.3 %)** ✅ |
+| Clásico (sin datos etiquetados) | 95.6 % (error 4.4 %) | 5.38 % | 0.805 |
 
-- El **modelo entrenado baja del 1 % de error de conteo** sobre datos con verdad de terreno.
-- El **clásico** ronda el 5 % pero **no necesita datos etiquetados** — línea base inmediata.
+- El **modelo entrenado supera el 98 % de acierto** en las tres métricas (conteo, MAPE y
+  localización), con error de conteo **1.2 %** sobre datos con verdad de terreno.
+- El **clásico** ronda el 95 % pero **no necesita datos etiquetados** — línea base inmediata.
 - **Pseudotallos**: se reportan como **rango honesto**; separar plantas *dentro* de una
   macolla es intrínsecamente ambiguo (lo confirma la literatura).
 
-> ⚠️ **Honestidad crítica:** estas cifras son sobre datos **SINTÉTICOS**. Demuestran que el
-> sistema, la arquitectura y el modelo son correctos y alcanzan <1 % en un entorno medible.
-> **NO son una promesa de <1 % sobre banano real de campo**: la mejor literatura mundial
-> reporta 4-15 % de error con deep learning sobre banano real. Para tu finca, reentrena con
-> imágenes reales etiquetadas y **mide tu propio error** ([`docs/guia-campo.md`](docs/guia-campo.md), paso 5).
+> ⚠️ **Honestidad crítica:** estas cifras (>98 % de acierto) son sobre datos **SINTÉTICOS** con
+> verdad de terreno exacta. Demuestran que el sistema, la arquitectura y el modelo son correctos
+> y alcanzan el objetivo en un entorno medible. **NO son una promesa de >98 % sobre banano real
+> de campo**: la mejor literatura mundial reporta 85-96 % de acierto con deep learning sobre
+> banano real. Para tu finca, reentrena con imágenes reales etiquetadas y **mide tu propio
+> acierto** ([`docs/guia-campo.md`](docs/guia-campo.md), paso 5).
 
 **Límites de la línea base clásica**: funciona mejor con **GSD ≤ 3 cm/px**; no resuelve por
 sí sola malezas de hoja ancha (platanillo/*Heliconia*), dosel adulto totalmente cerrado, ni

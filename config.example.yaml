@@ -21,4 +21,5 @@ overlap: 128            # solape entre tiles (evita cortar plantas en los bordes
 
 # --- Modelo de deep learning (opcional) ---
 model_weights: null     # ruta a pesos YOLOv8-seg. null = pipeline clásico sin modelo.
-model_conf: 0.25        # umbral de confianza del modelo.
+model_conf: 0.55        # umbral de confianza del modelo (calibrado para conteo).
+model_augment: false    # test-time augmentation: más preciso, más lento.

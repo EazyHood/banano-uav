@@ -50,14 +50,15 @@ def _agg(counts_gt, counts_pred, f1s):
     }
 
 
-def run_bench(n, size, gsd, weights=None, model_conf=0.6, seed0=900000):
+def run_bench(n, size, gsd, weights=None, model_conf=0.6, augment=False,
+              tile=640, overlap=128, seed0=900000):
     tmp = tempfile.mkdtemp()
-    cfg_classical = PipelineConfig(gsd_cm=gsd, tile=640, overlap=96).validate()
+    cfg_classical = PipelineConfig(gsd_cm=gsd, tile=tile, overlap=overlap).validate()
     cfg_model = None
     if weights:
         cfg_model = PipelineConfig(
-            gsd_cm=gsd, tile=640, overlap=96,
-            model_weights=weights, model_conf=model_conf,
+            gsd_cm=gsd, tile=tile, overlap=overlap,
+            model_weights=weights, model_conf=model_conf, model_augment=augment,
         ).validate()
 
     res = {"classical": {"gt": [], "pred": [], "f1": []},
@@ -119,10 +120,14 @@ def main():
     ap.add_argument("--gsd", type=float, default=3.0)
     ap.add_argument("--weights", default=None, help="Pesos YOLOv8-seg (opcional)")
     ap.add_argument("--model-conf", type=float, default=0.6)
+    ap.add_argument("--augment", action="store_true", help="Test-time augmentation")
+    ap.add_argument("--tile", type=int, default=640)
+    ap.add_argument("--overlap", type=int, default=128)
     ap.add_argument("--out", default="benchmark_results.json")
     args = ap.parse_args()
 
-    out = run_bench(args.n, args.size, args.gsd, args.weights, args.model_conf)
+    out = run_bench(args.n, args.size, args.gsd, args.weights, args.model_conf,
+                    augment=args.augment, tile=args.tile, overlap=args.overlap)
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(out, fh, indent=2, ensure_ascii=False)
     _print_table(out)

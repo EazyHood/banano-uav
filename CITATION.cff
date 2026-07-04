@@ -6,7 +6,7 @@ authors:
   - name: "EazyHood"
 repository-code: "https://github.com/EazyHood/banano-uav"
 license: AGPL-3.0-or-later
-version: 2.0.0
+version: 2.1.0
 date-released: 2026-07-03
 keywords:
   - banana

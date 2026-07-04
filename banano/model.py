@@ -44,10 +44,11 @@ def load_model(weights: str):
 class BananaModel:
     """Envoltura fina sobre un modelo YOLOv8-seg para detectar macollas."""
 
-    def __init__(self, weights: str, conf: float = 0.25, imgsz: int = 640):
+    def __init__(self, weights: str, conf: float = 0.25, imgsz: int = 640, augment: bool = False):
         self.weights = weights
         self.conf = conf
         self.imgsz = imgsz
+        self.augment = augment  # test-time augmentation (mas preciso, mas lento)
         self.model = load_model(weights)
 
     def predict_mats(self, image: np.ndarray, conf: float | None = None):
@@ -60,7 +61,9 @@ class BananaModel:
         """
         c = self.conf if conf is None else conf
         try:
-            results = self.model.predict(image, conf=c, imgsz=self.imgsz, verbose=False)
+            results = self.model.predict(
+                image, conf=c, imgsz=self.imgsz, augment=self.augment, verbose=False
+            )
         except Exception as e:
             raise ModelError(f"Fallo la inferencia del modelo: {e}") from e
 

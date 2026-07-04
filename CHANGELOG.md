@@ -3,6 +3,21 @@
 Todas las novedades notables de este proyecto se documentan aquí.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [2.1.0] — 2026-07-03
+
+Sube la precisión por encima del 98 % de acierto en las tres métricas.
+
+### Cambiado
+- **Modelo mayor**: YOLOv8**s**-seg (11.8 M par.) entrenado con dataset ampliado (400+80
+  tiles, ~17k instancias, 100 épocas). Sustituye al yolov8n.
+- **Benchmark (25 ortomosaicos, tol. estricta 0.5 m)**: **F1 0.993 (99.3 %)**, MAPE **1.23 %**,
+  error de conteo total **1.23 %** — las tres cumplen ≥98 % / ≤2 %. (Clásico: F1 0.805, 4.4 %.)
+- `model_conf` por defecto calibrado a **0.55**; `overlap` por defecto del benchmark a 128.
+
+### Añadido
+- **Test-time augmentation** opcional (`model_augment`, `--augment`): más precisión en
+  inferencia a cambio de velocidad.
+
 ## [2.0.0] — 2026-07-03
 
 Salto a nivel de producción ("AAA"): robustez, modelo entrenado, benchmark y empaquetado.

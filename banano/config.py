@@ -43,7 +43,8 @@ class PipelineConfig:
 
     # --- modelo de deep learning (opcional) ---
     model_weights: str | None = None  # ruta a pesos YOLOv8-seg; None = clasico
-    model_conf: float = 0.65  # umbral de confianza del modelo (calibrado para conteo)
+    model_conf: float = 0.55  # umbral de confianza del modelo (calibrado para conteo)
+    model_augment: bool = False  # test-time augmentation (mas preciso, mas lento)
 
     VALID_MODES = ("bright", "dark", "both")
 
