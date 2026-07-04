@@ -8,15 +8,20 @@ Un ortomosaico real no cabe en memoria ni en un solo paso de deteccion. Este mod
      las plantas del solape) + una deduplicacion espacial de seguridad.
   4. Reagrupa globalmente en macollas y adjunta lon/lat si hay georreferencia.
 """
+
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 
 import numpy as np
 
+from .config import PipelineConfig
 from .mats import cluster_mats, planting_regularity
 from .pipeline import detect_banana
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -97,6 +102,37 @@ def _tile_starts(total, tile, step):
     return starts
 
 
+def _detect_tile_model(img, model, config):
+    """Detecta macollas con el modelo y calcula la cobertura de dosel del tile."""
+    from .indices import to_rgb_float
+    from .segment import banana_canopy_mask, illumination_correct
+
+    pred = model.predict_mats(img)
+    centers = pred["centroids"]
+
+    gsd = config.gsd_cm
+    px_per_m = (100.0 / gsd) if (gsd and gsd > 0) else None
+    leaf_scale_px = (
+        max(5, int(config.leaf_len_m * 0.667 * px_per_m))
+        if px_per_m
+        else max(9, min(img.shape[:2]) // 60)
+    )
+    try:
+        mask, _ = banana_canopy_mask(
+            illumination_correct(to_rgb_float(img)), leaf_scale_px=leaf_scale_px
+        )
+    except Exception:
+        mask = np.ones(img.shape[:2], dtype=bool)
+
+    mat_eps = max(4, int(1.0 * px_per_m)) if px_per_m else max(8, min(img.shape[:2]) // 25)
+    params = {
+        "pseudostem_min_dist": max(3, int(config.pseudostem_sep_m * px_per_m)) if px_per_m else 12,
+        "mat_eps_px": mat_eps,
+        "model": model.weights,
+    }
+    return centers, mask, params, {"spacing_px": None, "strength": 0.0}, []
+
+
 def process_orthomosaic(
     raster,
     gsd_cm=None,
@@ -106,37 +142,80 @@ def process_orthomosaic(
     rel_threshold=0.25,
     use_mask=True,
     progress=None,
+    config: PipelineConfig | None = None,
 ):
-    """Procesa un objeto Raster completo y devuelve un OrthoResult."""
+    """Procesa un objeto Raster completo y devuelve un OrthoResult.
+
+    Un fallo al detectar en un tile individual se registra y se omite ese tile,
+    sin abortar todo el ortomosaico (robustez para lotes grandes).
+    """
     H, W = raster.shape
     gsd = gsd_cm if gsd_cm else raster.gsd_cm
 
-    # saneo de parametros: tile valido y solape estricto menor que el tile
-    tile = max(32, int(tile))
-    overlap = int(overlap)
-    if overlap < 0:
-        overlap = 0
-    if overlap >= tile:
-        overlap = tile // 2
+    if config is None:
+        config = PipelineConfig(
+            gsd_cm=gsd,
+            mode=mode,
+            use_mask=use_mask,
+            rel_threshold=rel_threshold,
+            tile=tile,
+            overlap=overlap,
+        ).validate()
+    else:
+        config.gsd_cm = config.gsd_cm if config.gsd_cm else gsd
+        config.validate()
+
+    tile, overlap = config.tile, config.overlap
     step = tile - overlap
 
+    # camino de deep learning (opcional): el modelo detecta macollas directamente
+    model = None
+    if config.model_weights:
+        from .model import BananaModel
+
+        model = BananaModel(config.model_weights, conf=config.model_conf, imgsz=min(tile, 1280))
+        logger.info("Usando modelo YOLOv8-seg: %s", config.model_weights)
+
     coords = [(y, x) for y in _tile_starts(H, tile, step) for x in _tile_starts(W, tile, step)]
+    logger.info(
+        "Ortomosaico %dx%d px en %d tiles (tile=%d, overlap=%d, gsd=%s)",
+        W,
+        H,
+        len(coords),
+        tile,
+        overlap,
+        gsd,
+    )
     all_pts = []
     canopy_px = 0
     core_px = 0
     warns = []
     params_sample = None
     grid_sample = {}
+    failed_tiles = 0
 
     for i, (y0, x0) in enumerate(coords):
         th = min(tile, H - y0)
         tw = min(tile, W - x0)
         if th < 32 or tw < 32:
             continue
-        img = raster.read_window(y0, x0, th, tw)
-        res = detect_banana(
-            img, gsd_cm=gsd, mode=mode, use_mask=use_mask, rel_threshold=rel_threshold
-        )
+        try:
+            img = raster.read_window(y0, x0, th, tw)
+            if model is not None:
+                tile_centers, tile_mask, tparams, tgrid, twarns = _detect_tile_model(
+                    img, model, config
+                )
+            else:
+                res = detect_banana(img, config=config)
+                tile_centers = res.centers
+                tile_mask = res.mask
+                tparams, tgrid, twarns = res.params, res.grid, res.warnings
+        except Exception as e:  # un tile malo no debe tumbar el lote
+            failed_tiles += 1
+            logger.warning("Tile (%d,%d) fallo y se omite: %s", y0, x0, e)
+            if progress:
+                progress(i + 1, len(coords))
+            continue
 
         # nucleo del tile (excluye medio solape salvo en bordes de la imagen)
         my0 = 0 if y0 == 0 else overlap // 2
@@ -144,32 +223,40 @@ def process_orthomosaic(
         my1 = th if (y0 + th >= H) else th - overlap // 2
         mx1 = tw if (x0 + tw >= W) else tw - overlap // 2
 
-        for r, c in res.centers:
+        for r, c in tile_centers:
             if my0 <= r < my1 and mx0 <= c < mx1:
                 all_pts.append((y0 + r, x0 + c))
 
-        core_mask = res.mask[my0:my1, mx0:mx1]
+        core_mask = tile_mask[my0:my1, mx0:mx1]
         canopy_px += int(core_mask.sum())
         core_px += int(core_mask.size)
 
-        params_sample = res.params
-        grid_sample = res.grid
-        for w in res.warnings:
+        params_sample = tparams
+        grid_sample = tgrid
+        for w in twarns:
             if w not in warns:
                 warns.append(w)
         if progress:
             progress(i + 1, len(coords))
 
+    if failed_tiles:
+        warns.append(f"{failed_tiles} tile(s) fallaron y se omitieron (ver el log).")
+
     pts = np.array(all_pts, dtype=float) if all_pts else np.empty((0, 2))
 
     min_dist = params_sample["pseudostem_min_dist"] if params_sample else 12
     mat_eps = params_sample["mat_eps_px"] if params_sample else 20
-    pts = _dedup(pts, 0.6 * min_dist)
 
-    labels, mats = cluster_mats(pts, mat_eps)
-    mat_centroids = (
-        np.array([m["centroid"] for m in mats]) if mats else np.empty((0, 2))
-    )
+    if model is not None:
+        # el modelo ya devuelve macollas: deduplicar por escala de macolla, sin DBSCAN
+        pts = _dedup(pts, 0.5 * mat_eps)
+        mats = [{"centroid": p, "n_pseudostems": 1, "members": p[None, :]} for p in pts]
+        labels = np.arange(len(mats))
+        warns.append("Conteo por modelo de deep learning: unidad = macolla.")
+    else:
+        pts = _dedup(pts, 0.6 * min_dist)
+        labels, mats = cluster_mats(pts, mat_eps)
+    mat_centroids = np.array([m["centroid"] for m in mats]) if mats else np.empty((0, 2))
     reg = planting_regularity(mat_centroids)
 
     # georreferencia

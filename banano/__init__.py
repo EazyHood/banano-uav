@@ -15,9 +15,18 @@ Uso rapido:
     print(res.n_mats, res.n_pseudostems)
 """
 
-from .pipeline import detect_banana, DetectionResult
-from .ortho import process_orthomosaic, OrthoResult
+from .config import PipelineConfig
+from .errors import (
+    BananoError,
+    ConfigError,
+    DependencyError,
+    InputError,
+    ModelError,
+    RasterError,
+)
 from .geo import Raster
+from .ortho import OrthoResult, process_orthomosaic
+from .pipeline import DetectionResult, detect_banana
 
 __all__ = [
     "detect_banana",
@@ -25,5 +34,12 @@ __all__ = [
     "process_orthomosaic",
     "OrthoResult",
     "Raster",
+    "PipelineConfig",
+    "BananoError",
+    "InputError",
+    "ConfigError",
+    "RasterError",
+    "DependencyError",
+    "ModelError",
 ]
-__version__ = "1.0.0"
+__version__ = "2.0.0"

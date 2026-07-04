@@ -4,8 +4,6 @@ from __future__ import annotations
 import os
 import sys
 
-import numpy as np
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from banano.metrics import match_points, prf  # noqa: E402

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "banano-drone"
-version = "1.0.0"
+version = "2.0.0"
 description = "Identificacion y conteo de cultivo de banano en ortomosaicos de dron (libre, AGPL-3.0)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,13 +26,14 @@ dependencies = [
     "scikit-learn>=1.3",
     "matplotlib>=3.7",
     "imageio>=2.31",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
 geo = ["rasterio>=1.3"]
 gis = ["geopandas>=0.14"]
 deep = ["ultralytics>=8.1"]
-dev = ["pytest>=7.0"]
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "ruff>=0.6", "mypy>=1.8", "types-PyYAML"]
 
 [project.urls]
 Homepage = "https://github.com/EazyHood/banano-uav"
@@ -46,3 +47,25 @@ include = ["banano*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM"]
+ignore = ["E501", "B905", "SIM108"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]
+"scripts/*" = ["E402"]
+"deep/*" = ["E402"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = false
+no_implicit_optional = true
+check_untyped_defs = false
+exclude = ["deep/", "scripts/", "tests/"]

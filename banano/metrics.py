@@ -3,6 +3,7 @@
 Compara centros detectados contra posiciones verdaderas (ground truth) usando
 emparejamiento voraz por vecino mas cercano con una tolerancia en pixeles.
 """
+
 from __future__ import annotations
 
 import numpy as np

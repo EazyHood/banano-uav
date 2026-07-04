@@ -1,4 +1,5 @@
 """Visualizacion de resultados de deteccion."""
+
 from __future__ import annotations
 
 import matplotlib
@@ -48,10 +49,7 @@ def overlay(rgb, result, out_path=None, title=None, show_mask=True):
         )
 
     if title is None:
-        title = (
-            f"Banano — {result.n_mats} macollas, "
-            f"{result.n_pseudostems} pseudotallos"
-        )
+        title = f"Banano — {result.n_mats} macollas, {result.n_pseudostems} pseudotallos"
     ax.set_title(title, fontsize=13)
     ax.axis("off")
     fig.tight_layout()

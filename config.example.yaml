@@ -1,0 +1,24 @@
+# Configuración de ejemplo de banano-drone.
+# Uso:  banano-detect --input orto.tif --config config.example.yaml
+# Cualquier flag de la CLI (--gsd, --tile, ...) tiene prioridad sobre este archivo.
+
+# --- Escala física ---
+gsd_cm: null            # cm/píxel. null = auto en GeoTIFF, o estima del marco de siembra.
+assumed_spacing_m: 2.5  # separación típica entre plantas de banano (m).
+leaf_len_m: 0.9         # largo de hoja de banano (m).
+pseudostem_sep_m: 0.5   # separación entre pseudotallos dentro de una macolla (m).
+
+# --- Detección de centros ---
+mode: both              # bright | dark | both
+rel_threshold: 0.30     # umbral relativo de picos (0-1). Baja si detecta de menos.
+use_mask: true          # restringir la detección al dosel de banano segmentado.
+use_grid: true          # usar el marco de siembra estimado para fijar distancias.
+grid_min_strength: 0.05 # fuerza mínima del patrón periódico para fiarse del marco.
+
+# --- Procesado de ortomosaico ---
+tile: 1024              # tamaño de tile en píxeles.
+overlap: 128            # solape entre tiles (evita cortar plantas en los bordes).
+
+# --- Modelo de deep learning (opcional) ---
+model_weights: null     # ruta a pesos YOLOv8-seg. null = pipeline clásico sin modelo.
+model_conf: 0.25        # umbral de confianza del modelo.

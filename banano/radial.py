@@ -10,6 +10,7 @@ por esos centros a varios radios, y luego supresion de no-maximos para extraer l
 picos. Esto localiza pseudotallos individuales incluso dentro de un grupo, algo que
 la deteccion de copas por "manchas" no logra.
 """
+
 from __future__ import annotations
 
 import numpy as np

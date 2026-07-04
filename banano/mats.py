@@ -6,6 +6,7 @@ conteo en la unidad agronomica correcta. Asi el usuario obtiene DOS numeros:
   - n_pseudostems: pseudotallos individuales (por simetria radial).
   - n_mats: macollas (grupos), la unidad de siembra/manejo.
 """
+
 from __future__ import annotations
 
 import numpy as np

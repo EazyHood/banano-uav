@@ -1,0 +1,16 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+dataset/
+runs/
+resultados*/
+outputs/
+example/
+benchmark_results.json
+tests/
+docs/
+.github/
+*.egg-info/
+build/
+dist/

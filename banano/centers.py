@@ -12,6 +12,7 @@ por mancha del dosel). La FRST aporta candidatos mas finos (pseudotallos). Se
 fusionan ambos conjuntos y se deduplican. Asi, FRST pasa de ser "el detector" a
 ser un generador de candidatos, como recomendo la revision.
 """
+
 from __future__ import annotations
 
 import numpy as np

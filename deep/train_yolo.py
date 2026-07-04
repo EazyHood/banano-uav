@@ -19,14 +19,17 @@ def main():
     ap.add_argument("--imgsz", type=int, default=1024)
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--name", default="banano_seg")
+    ap.add_argument("--workers", type=int, default=0,
+                    help="Workers del DataLoader (0 evita fallos CUDA en Windows)")
+    ap.add_argument("--seed", type=int, default=0, help="Semilla para reproducibilidad")
     args = ap.parse_args()
 
     try:
         from ultralytics import YOLO
-    except ImportError:
+    except ImportError as e:
         raise SystemExit(
-            "Falta ultralytics. Instala: pip install -r requirements-deep.txt"
-        )
+            "Falta ultralytics. Instala: pip install -e .[deep]"
+        ) from e
 
     model = YOLO(args.model)
     model.train(
@@ -36,6 +39,9 @@ def main():
         batch=args.batch,
         name=args.name,
         patience=25,
+        workers=args.workers,
+        seed=args.seed,
+        deterministic=True,
         # aumentos utiles para dron: mosaico + rotaciones (banano es rotacion-invariante)
         degrees=180,
         fliplr=0.5,
@@ -44,7 +50,7 @@ def main():
         hsv_s=0.5,
         hsv_v=0.3,
     )
-    print("Entrenamiento terminado. Pesos en runs/segment/%s/weights/best.pt" % args.name)
+    print(f"Entrenamiento terminado. Pesos en runs/segment/{args.name}/weights/best.pt")
 
 
 if __name__ == "__main__":

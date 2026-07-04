@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+title: "banano-drone: identificación y conteo de cultivo de banano en ortomosaicos de dron"
+message: "Si usas este software en tu investigación o producto, por favor cítalo."
+type: software
+authors:
+  - name: "EazyHood"
+repository-code: "https://github.com/EazyHood/banano-uav"
+license: AGPL-3.0-or-later
+version: 2.0.0
+date-released: 2026-07-03
+keywords:
+  - banana
+  - banano
+  - drone
+  - UAV
+  - remote-sensing
+  - precision-agriculture
+  - instance-segmentation

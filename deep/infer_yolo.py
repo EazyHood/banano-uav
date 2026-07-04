@@ -21,10 +21,10 @@ def main():
 
     try:
         from ultralytics import YOLO
-    except ImportError:
+    except ImportError as e:
         raise SystemExit(
-            "Falta ultralytics. Instala: pip install -r requirements-deep.txt"
-        )
+            "Falta ultralytics. Instala: pip install -e .[deep]"
+        ) from e
 
     os.makedirs(args.out, exist_ok=True)
     model = YOLO(args.weights)

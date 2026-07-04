@@ -10,6 +10,7 @@ CRS) de decenas de miles de pixeles por lado. Este modulo:
 Si ``rasterio`` no esta instalado, cae con elegancia a una imagen normal (imageio):
 funciona igual, pero sin georreferencia (hay que pasar --gsd y no habra lon/lat).
 """
+
 from __future__ import annotations
 
 import math
@@ -72,7 +73,9 @@ def _normalize_rgb(arr):
         return (arr // 256).astype(np.uint8)
     if np.issubdtype(arr.dtype, np.integer):
         info = np.iinfo(arr.dtype)
-        return (255.0 * (arr.astype(np.float64) - info.min) / (info.max - info.min)).astype(np.uint8)
+        return (255.0 * (arr.astype(np.float64) - info.min) / (info.max - info.min)).astype(
+            np.uint8
+        )
     # flotante
     arr = arr.astype(np.float32)
     mx = float(arr.max()) if arr.size else 1.0

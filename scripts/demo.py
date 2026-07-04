@@ -21,8 +21,8 @@ import imageio.v2 as imageio  # noqa: E402
 
 from banano.metrics import match_points, prf  # noqa: E402
 from banano.pipeline import detect_banana  # noqa: E402
-from banano.visualize import overlay, save_score_map  # noqa: E402
 from banano.synth import synth_plantation  # noqa: E402
+from banano.visualize import overlay, save_score_map  # noqa: E402
 
 
 def _np_default(o):

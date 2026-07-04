@@ -4,6 +4,7 @@ Todos los indices asumen un arreglo HxWx3 en orden RGB. La entrada se normaliza
 a [0, 1]. Referencias: Woebbecke 1995 (ExG), Meyer 2008 (ExGR), Gitelson 2002
 (VARI), Louhaichi 2001 (GLI), Tucker 1979 (NGRDI).
 """
+
 from __future__ import annotations
 
 import numpy as np

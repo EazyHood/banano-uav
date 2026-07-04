@@ -3,6 +3,7 @@
 Estos son los productos que un agronomo espera: una tabla de plantas, una capa GIS
 que puede abrir en QGIS/Google Earth, un mapa y un informe legible. Todo offline.
 """
+
 from __future__ import annotations
 
 import base64
@@ -15,7 +16,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.patches import Circle
 
 
@@ -77,9 +77,7 @@ def render_map(path, overview_img, sy, sx, result, title=None):
     mat_r = max(4, (result.params.get("mat_eps_px", 20) / (0.5 * (sy + sx))))
     for m in result.mats:
         cy, cx = m["centroid"]
-        ax.add_patch(
-            Circle((cx / sx, cy / sy), mat_r, fill=False, edgecolor="yellow", lw=0.8)
-        )
+        ax.add_patch(Circle((cx / sx, cy / sy), mat_r, fill=False, edgecolor="yellow", lw=0.8))
     if result.n_pseudostems:
         ax.scatter(
             result.pseudostems_px[:, 1] / sx,
@@ -112,14 +110,19 @@ def write_html(path, result, map_png=None, input_name=""):
     rows = [
         ("Macollas detectadas", s["n_macollas"]),
         ("Pseudotallos (estimado)", s["pseudotallos_estimados"]),
-        ("Pseudotallos (rango honesto)", f'{s["pseudotallos_rango"][0]} – {s["pseudotallos_rango"][1]}'),
+        (
+            "Pseudotallos (rango honesto)",
+            f"{s['pseudotallos_rango'][0]} – {s['pseudotallos_rango'][1]}",
+        ),
         ("Pseudotallos por macolla", s["pseudotallos_por_macolla"]),
-        ("Cobertura de dosel", f'{s["cobertura_dosel_%"]} %'),
+        ("Cobertura de dosel", f"{s['cobertura_dosel_%']} %"),
         ("GSD (cm/píxel)", s["gsd_cm"] if s["gsd_cm"] else "no provisto"),
         ("Georreferenciado", "sí" if s["georreferenciado"] else "no"),
         ("Regularidad de siembra", s["regularidad_siembra"]),
     ]
-    table = "".join(f"<tr><td>{html.escape(str(k))}</td><td>{html.escape(str(v))}</td></tr>" for k, v in rows)
+    table = "".join(
+        f"<tr><td>{html.escape(str(k))}</td><td>{html.escape(str(v))}</td></tr>" for k, v in rows
+    )
     img_html = ""
     if map_png and os.path.exists(map_png):
         img_html = f'<img src="data:image/png;base64,{_b64(map_png)}" alt="mapa de detección">'

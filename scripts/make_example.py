@@ -31,8 +31,8 @@ def main():
     try:
         import rasterio
         from rasterio.transform import from_origin
-    except ImportError:
-        raise SystemExit("Falta rasterio. Instala:  pip install -e .[geo]")
+    except ImportError as e:
+        raise SystemExit("Falta rasterio. Instala:  pip install -e .[geo]") from e
 
     img, gt_ps, gt_mats, meta = synth_plantation(
         H=args.size, W=args.size, gsd_cm=args.gsd, seed=args.seed

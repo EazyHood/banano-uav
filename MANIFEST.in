@@ -1,0 +1,13 @@
+include LICENSE
+include README.md
+include CHANGELOG.md
+include CONTRIBUTING.md
+include config.example.yaml
+include deep/*.py
+include deep/*.yaml
+recursive-include docs *.md
+prune dataset
+prune runs
+prune resultados
+prune outputs
+prune example

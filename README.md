@@ -50,7 +50,14 @@ pip install -e .[geo]      # [geo] añade soporte GeoTIFF (rasterio); sin él us
 ```
 
 Extras opcionales: `[gis]` (exportar Shapefile con geopandas), `[deep]` (modelo YOLOv8-seg),
-`[dev]` (pruebas).
+`[dev]` (pruebas, lint, type-check).
+
+**Con Docker** (no necesitas instalar nada más):
+
+```bash
+docker build -t banano-drone .
+docker run -v "$PWD:/data" banano-drone --input /data/ortomosaico.tif --out /data/resultados
+```
 
 ## Uso
 
@@ -87,12 +94,28 @@ banano-detect --input example/plantacion.tif --out resultados
 
 ```
 --gsd 3.0            resolución cm/píxel (auto en GeoTIFF; el parámetro de mayor impacto)
+--config c.yaml      archivo YAML de configuración (reproducible; ver config.example.yaml)
 --tile 1024          tamaño de tile (px) para procesar ortomosaicos grandes
 --overlap 128        solape entre tiles (evita cortar plantas en los bordes)
 --mode both          centro de simetría: bright / dark / both
 --threshold 0.30     umbral de picos (baja si detecta de menos, sube si de más)
 --no-mask            no restringir al dosel segmentado (si la segmentación falla)
+-v / --quiet         más/menos detalle de log
+--version            versión
 ```
+
+**Configuración reproducible** con un archivo YAML (auditable, versionable):
+
+```bash
+cp config.example.yaml mi_config.yaml   # edítalo
+banano-detect --input orto.tif --config mi_config.yaml --out resultados
+```
+
+## Documentación
+
+- 📘 [**Guía de campo**](docs/guia-campo.md) — cómo volar, generar el ortomosaico e interpretar resultados (para agrónomos y empresas).
+- 🐍 [**Referencia de API**](docs/api.md) — usar `banano` como librería Python.
+- 📚 [**Estado del arte**](docs/estado-del-arte.md) — fundamento científico y referencias.
 
 ## Cómo funciona (pipeline híbrido, sin datos etiquetados)
 
@@ -102,30 +125,59 @@ GSD) → **centros por transformada de distancia + watershed FUSIONADO con Fast 
 Symmetry Transform** → agrupamiento en macollas (DBSCAN) → **procesado por tiles con
 deduplicación** en bordes → georreferenciación a lon/lat.
 
-## Resultados y límites (honestos)
+## Resultados y precisión (benchmark honesto)
 
-En una plantación sintética con verdad de terreno (para validar la lógica):
+Medido sobre plantaciones sintéticas con **verdad de terreno exacta** (`deep/benchmark.py`,
+15 ortomosaicos de 1024 px, GSD 3 cm/px). Reproduce con:
+`python deep/benchmark.py --n 15 --size 1024 --weights models/banano_seg_synth_v1.pt`
 
-- **Macollas: 94-96% de acierto** (F1 ~0.92-0.94). Este es el número fiable.
-- **Pseudotallos: rango honesto** que contiene la verdad; el punto estimado puede desviarse
-  ±30% porque separar plantas *dentro* de una macolla es intrínsecamente ambiguo (lo
-  confirma la literatura).
+| Método | Error de conteo total | MAPE por lote | F1 (localización) |
+|---|---|---|---|
+| **Modelo YOLOv8-seg** (incluido) | **0.92 %** ✅ | 2.15 % | 0.977 |
+| Clásico (sin datos etiquetados) | 4.77 % | 4.72 % | 0.936 |
 
-**Lo sintético NO es banano real.** La línea base clásica funciona mejor con **GSD ≤ 3 cm/px**.
-No resuelve por sí sola malezas de hoja ancha (platanillo/*Heliconia*), dosel adulto totalmente
-cerrado, ni plantas subpíxel. Para esos casos y precisión comercial, usa el modelo entrenado.
-Ver el guardarraíl de GSD y los avisos que emite el propio informe.
+- El **modelo entrenado baja del 1 % de error de conteo** sobre datos con verdad de terreno.
+- El **clásico** ronda el 5 % pero **no necesita datos etiquetados** — línea base inmediata.
+- **Pseudotallos**: se reportan como **rango honesto**; separar plantas *dentro* de una
+  macolla es intrínsecamente ambiguo (lo confirma la literatura).
+
+> ⚠️ **Honestidad crítica:** estas cifras son sobre datos **SINTÉTICOS**. Demuestran que el
+> sistema, la arquitectura y el modelo son correctos y alcanzan <1 % en un entorno medible.
+> **NO son una promesa de <1 % sobre banano real de campo**: la mejor literatura mundial
+> reporta 4-15 % de error con deep learning sobre banano real. Para tu finca, reentrena con
+> imágenes reales etiquetadas y **mide tu propio error** ([`docs/guia-campo.md`](docs/guia-campo.md), paso 5).
+
+**Límites de la línea base clásica**: funciona mejor con **GSD ≤ 3 cm/px**; no resuelve por
+sí sola malezas de hoja ancha (platanillo/*Heliconia*), dosel adulto totalmente cerrado, ni
+plantas subpíxel. Para esos casos, el modelo entrenado. El programa avisa (guardarraíl de GSD,
+dosel cerrado) cuando la fiabilidad baja.
 
 ## Camino de deep learning (precisión comercial)
 
-Cuando tengas tiles etiquetados:
+Incluye un **modelo YOLOv8-seg entrenado** (`models/banano_seg_synth_v1.pt`) y todo el
+pipeline reproducible (dataset → entrenamiento → inferencia → integración):
 
 ```bash
 pip install -e .[deep]
-python deep/prepare_dataset.py --image orto.tif --out dataset/images --tile 1024
-python deep/train_yolo.py --data deep/banana.yaml --epochs 100
+
+# usar el modelo incluido (detecta macollas directamente):
+banano-detect --input orto.tif --config config.example.yaml \
+    --out resultados   # pon model_weights: models/banano_seg_synth_v1.pt en el YAML
+
+# o entrenar el tuyo desde cero (sintético o real):
+python deep/make_synth_dataset.py --out dataset --train 200 --val 40
+python deep/train_yolo.py --data dataset/data.yaml --model yolov8n-seg.pt --epochs 80
 python deep/infer_yolo.py --weights runs/segment/banano_seg/weights/best.pt --image tile.png
+
+# medir precisión (benchmark honesto con verdad de terreno):
+python deep/benchmark.py --n 20 --size 1024 --weights models/banano_seg_synth_v1.pt
 ```
+
+> ⚠️ **El modelo incluido está entrenado con datos SINTÉTICOS.** Demuestra el pipeline
+> completo y sirve de línea base reproducible, pero para tu finca real debes **reentrenarlo
+> con imágenes reales etiquetadas** para el máximo rendimiento. La brecha sintético→real es
+> inherente a cualquier modelo; no confíes en cifras de campo sin validar (ver
+> [`docs/guia-campo.md`](docs/guia-campo.md), paso 5).
 
 **Recursos reales para arrancar** (ver [`docs/estado-del-arte.md`](docs/estado-del-arte.md)):
 - **ALSS-YOLO-Seg** — modelo abierto específico de banano UAV: https://github.com/helloworlder8/computer_vision
@@ -137,10 +189,13 @@ python deep/infer_yolo.py --weights runs/segment/banano_seg/weights/best.pt --im
 ```
 banano/          indices · segment · grid · radial · centers · mats · pipeline
                  geo (GeoTIFF) · ortho (tiles+dedup) · report (CSV/GeoJSON/HTML) · cli
-scripts/         demo.py (demo con métricas) · run.py (una imagen) · make_example.py
-deep/            camino YOLOv8-seg / ALSS-YOLO-Seg
-docs/            estado del arte y referencias
-tests/           pruebas
+                 config · errors · logconf · model (YOLOv8-seg)
+models/          pesos entrenados (banano_seg_synth_v1.pt)
+scripts/         demo.py · run.py · make_example.py
+deep/            make_synth_dataset · train_yolo · infer_yolo · benchmark
+docs/            guía de campo · API · estado del arte
+tests/           pruebas (pytest, ~44)
+Dockerfile · pyproject.toml · config.example.yaml · .github/workflows/ci.yml
 ```
 
 ## Contribuir

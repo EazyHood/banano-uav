@@ -3,6 +3,34 @@
 Todas las novedades notables de este proyecto se documentan aquí.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [2.0.0] — 2026-07-03
+
+Salto a nivel de producción ("AAA"): robustez, modelo entrenado, benchmark y empaquetado.
+
+### Añadido
+- **Configuración centralizada** `PipelineConfig` con validación y carga desde YAML
+  (`--config`); reproducibilidad y auditoría de parámetros.
+- **Modelo de deep learning** integrado: `banano/model.py` (YOLOv8-seg), pipeline completo
+  dataset→entrenamiento→inferencia→integración, y **pesos entrenados incluidos**
+  (`models/banano_seg_synth_v1.pt`). El modelo detecta macollas directamente.
+- **Benchmark honesto** (`deep/benchmark.py`): MAE/RMSE/MAPE + F1 de localización contra
+  verdad de terreno, clásico vs modelo.
+- **Robustez de producción**: jerarquía de excepciones (`banano/errors.py`), logging
+  (`-v`/`--quiet`), validación de entradas, códigos de salida (0/1/2/130), un tile que
+  falla no aborta el lote.
+- **Empaquetado**: Dockerfile, `MANIFEST.in`, listo para PyPI (twine OK), `config.example.yaml`,
+  `CITATION.cff`, `examples/quickstart.py`.
+- **Calidad**: ruff + mypy limpios, cobertura de pruebas ≥78% (~44 pruebas), CI ampliado
+  (lint + type-check + coverage).
+- **Documentación**: guía de campo (`docs/guia-campo.md`) y referencia de API (`docs/api.md`).
+
+### Corregido
+- Etiquetas del dataset: una macolla con hijuelos separados generaba rosetas sin etiquetar
+  (falsos positivos al entrenar); ahora se usa el **casco convexo** de todo el cluster.
+- Segmentación de vegetación uniforme: umbral local (offset 0) la excluía; ahora se une con
+  el piso global de Otsu.
+- Entrenamiento en Windows: `workers=0` evita el error CUDA "resource already mapped".
+
 ## [1.0.0] — 2026-07-03
 
 Primera versión pública, utilizable de punta a punta con un dron (flujo post-vuelo).

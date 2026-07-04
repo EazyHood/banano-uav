@@ -16,6 +16,7 @@ Estrategia (no requiere datos etiquetados), endurecida tras revision adversarial
 Es una linea base explicable que funciona sin anotaciones. Para produccion, ver
 el paquete ``deep`` (YOLOv8-seg / ALSS-YOLO-Seg).
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -61,13 +62,15 @@ def vegetation_mask(rgb, block_frac=0.12):
     veg_frac_global = float((idx > max(t_global, 0.0)).mean())
     bimodal = 0.03 < veg_frac_global < 0.97
 
-    # umbral local adaptativo (robusto a iluminacion residual)
+    # umbral local adaptativo (capta detalle fino) UNIDO al piso global de Otsu
+    # (capta vegetacion uniforme fuerte que el local, con offset 0, dejaria fuera).
+    floor = max(t_global, 0.0)  # nunca por debajo del suelo
     block = _odd(max(15, int(block_frac * min(rgb.shape[:2]))))
     try:
         t_local = threshold_local(idx, block_size=block, method="gaussian", offset=0.0)
     except Exception:
-        t_local = t_global
-    mask = (idx > t_local) & (idx > 0.0)  # nunca por debajo del suelo
+        t_local = floor
+    mask = ((idx > t_local) | (idx > floor)) & (idx > 0.0)
 
     diag = {
         "veg_fraction": float(mask.mean()),

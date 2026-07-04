@@ -11,6 +11,7 @@ SECUNDARIO (fuera del lobulo central) da el vector al vecino mas cercano en la
 reticula. Se excluye un radio central para no confundir el lobulo central (ancho
 como una planta) con el paso del marco.
 """
+
 from __future__ import annotations
 
 import numpy as np

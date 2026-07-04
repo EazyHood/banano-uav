@@ -8,6 +8,7 @@ centro (la firma radial que el detector busca). Las macollas tienen 1-3
 pseudotallos. Se anaden malezas de textura fina y un camino de suelo para poner
 a prueba la segmentacion.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -27,8 +28,8 @@ def _rosette_patch(P, n_leaves, leaf_len, leaf_w, rng):
     for a in angles:
         dx = xx - cx
         dy = yy - cy
-        u = dx * np.cos(a) + dy * np.sin(a)      # a lo largo de la hoja
-        v = -dx * np.sin(a) + dy * np.cos(a)     # perpendicular
+        u = dx * np.cos(a) + dy * np.sin(a)  # a lo largo de la hoja
+        v = -dx * np.sin(a) + dy * np.cos(a)  # perpendicular
         along = np.exp(-0.5 * ((u - leaf_len * 0.45) / (leaf_len * 0.55)) ** 2)
         across = np.exp(-0.5 * (v / leaf_w) ** 2)
         leaf = along * across * (u > 0)
@@ -36,7 +37,7 @@ def _rosette_patch(P, n_leaves, leaf_len, leaf_w, rng):
     return np.clip(canvas, 0.0, 1.0)
 
 
-def _stamp_rosette(img, cy, cx, P, leaf_len, leaf_w, rng):
+def _stamp_rosette(img, cy, cx, P, leaf_len, leaf_w, rng, inst_map=None, inst_id=0):
     H, W, _ = img.shape
     n_leaves = int(rng.integers(6, 11))
     canvas = _rosette_patch(P, n_leaves, leaf_len, leaf_w, rng)
@@ -53,11 +54,15 @@ def _stamp_rosette(img, cy, cx, P, leaf_len, leaf_w, rng):
     if iy1 <= iy0 or ix1 <= ix0:
         return
     ry0, rx0 = iy0 - y0, ix0 - x0
-    a = canvas[ry0 : ry0 + (iy1 - iy0), rx0 : rx0 + (ix1 - ix0)][..., None]
+    a2 = canvas[ry0 : ry0 + (iy1 - iy0), rx0 : rx0 + (ix1 - ix0)]
+    a = a2[..., None]
     ctr = center[ry0 : ry0 + (iy1 - iy0), rx0 : rx0 + (ix1 - ix0)][..., None]
     col = green[None, None, :] * (0.8 + 0.4 * a) + ctr * 0.18
     region = img[iy0:iy1, ix0:ix1]
     img[iy0:iy1, ix0:ix1] = (1 - a) * region + a * col
+    if inst_map is not None and inst_id:
+        sub = inst_map[iy0:iy1, ix0:ix1]
+        sub[a2 > 0.15] = inst_id  # asigna estos pixeles a la macolla inst_id
 
 
 def _add_weeds(img, rng, px_per_m):
@@ -74,7 +79,9 @@ def _add_road(img, rng):
     H, W, _ = img.shape
     y = int(rng.integers(int(0.3 * H), int(0.65 * H)))
     w = int(rng.integers(int(0.03 * H), int(0.06 * H)))
-    band = np.array([0.5, 0.48, 0.45], np.float32) + rng.normal(0, 0.01, (w, W, 3)).astype(np.float32)
+    band = np.array([0.5, 0.48, 0.45], np.float32) + rng.normal(0, 0.01, (w, W, 3)).astype(
+        np.float32
+    )
     img[y : y + w, :] = np.clip(band, 0, 1)
 
 
@@ -136,6 +143,66 @@ def synth_plantation(
     img = np.clip(img, 0, 1)
     return (
         (img * 255).astype(np.uint8),
+        np.array(gt_pseudo, dtype=float),
+        np.array(gt_mats, dtype=float),
+        {"gsd_cm": gsd_cm, "spacing_m": spacing_m},
+    )
+
+
+def synth_plantation_labeled(
+    H=1024, W=1024, gsd_cm=3.0, spacing_m=2.6, seed=7, weeds=True, road=True
+):
+    """Como synth_plantation pero ademas devuelve un mapa de instancias por macolla.
+
+    Devuelve (img_uint8, instance_map, gt_pseudo, gt_mats, meta) donde instance_map
+    es int32 HxW con 0=fondo y 1..N = id de cada macolla. Sirve para generar el
+    dataset de entrenamiento de segmentacion de instancias (YOLOv8-seg).
+    """
+    rng = _rng(seed)
+    px_per_m = 100.0 / gsd_cm
+    spacing_px = spacing_m * px_per_m
+
+    soil = np.array([0.45, 0.32, 0.22], np.float32)
+    img = np.ones((H, W, 3), np.float32) * soil
+    img = np.clip(img + rng.normal(0, 0.02, (H, W, 3)).astype(np.float32), 0, 1)
+    inst = np.zeros((H, W), np.int32)
+
+    leaf_len = 0.9 * px_per_m
+    leaf_w = 0.12 * px_per_m
+    P = int(2.4 * leaf_len)
+
+    gt_pseudo, gt_mats = [], []
+    ys = np.arange(spacing_px, H - spacing_px, spacing_px)
+    xs = np.arange(spacing_px, W - spacing_px, spacing_px)
+    mat_id = 0
+    for gy in ys:
+        for gx in xs:
+            jy = gy + rng.normal(0, 0.10 * spacing_px)
+            jx = gx + rng.normal(0, 0.10 * spacing_px)
+            n_ps = int(rng.choice([1, 2, 3], p=[0.25, 0.35, 0.40]))
+            mat_id += 1
+            members = []
+            for k in range(n_ps):
+                if k == 0:
+                    py, px = jy, jx
+                else:
+                    a = rng.uniform(0, 2 * np.pi)
+                    off = 0.5 * px_per_m
+                    py, px = jy + off * np.sin(a), jx + off * np.cos(a)
+                _stamp_rosette(img, py, px, P, leaf_len, leaf_w, rng, inst_map=inst, inst_id=mat_id)
+                gt_pseudo.append((py, px))
+                members.append((py, px))
+            gt_mats.append(tuple(np.mean(members, axis=0)))
+
+    if weeds:
+        _add_weeds(img, rng, px_per_m)
+    if road:
+        _add_road(img, rng)
+
+    img = np.clip(img, 0, 1)
+    return (
+        (img * 255).astype(np.uint8),
+        inst,
         np.array(gt_pseudo, dtype=float),
         np.array(gt_mats, dtype=float),
         {"gsd_cm": gsd_cm, "spacing_m": spacing_m},
