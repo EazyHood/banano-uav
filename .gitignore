@@ -18,3 +18,5 @@ benchmark*.json
 quickstart_out/
 *.pt
 !models/*.pt
+realdata/
+real_eval/

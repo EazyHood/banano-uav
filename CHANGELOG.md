@@ -18,6 +18,23 @@ Sube la precisión por encima del 98 % de acierto en las tres métricas.
 - **Test-time augmentation** opcional (`model_augment`, `--augment`): más precisión en
   inferencia a cambio de velocidad.
 
+## [2.1.0] — 2026-07-04
+
+### Añadido
+- **Modelo entrenado con imágenes UAV REALES de banano** (`models/banano_real_v1.pt`): detector
+  YOLOv8 entrenado sobre ~14 000 tiles reales (dataset abierto AI-BananaMapping, Zenodo
+  20945958, CC-BY-4.0). Listo para usar sobre ortofotos reales **sin entrenar**.
+  - Rendimiento sobre 4 611 tiles de **test real** nunca vistos: **mAP50 0.411**, precisión 0.47,
+    recall 0.46 (cifras honestas de campo).
+- Utilidades: `deep/prepare_real_dataset.py` (colapsa clases a "banano"), `deep/eval_real.py`
+  (evalúa sobre el split de test real + ejemplos visuales).
+- Opción `model_augment` (test-time augmentation) en `PipelineConfig`.
+- Documentación del modelo real: [`docs/modelo-real.md`](docs/modelo-real.md).
+
+### Corregido
+- Entrenamiento en Windows: ejecutar desde un archivo `.py` real (no heredoc por stdin) para
+  que el multiprocessing del DataLoader (`workers>0`) no falle con `OSError: '<stdin>'`.
+
 ## [2.0.0] — 2026-07-03
 
 Salto a nivel de producción ("AAA"): robustez, modelo entrenado, benchmark y empaquetado.

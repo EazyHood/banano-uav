@@ -154,9 +154,25 @@ sí sola malezas de hoja ancha (platanillo/*Heliconia*), dosel adulto totalmente
 plantas subpíxel. Para esos casos, el modelo entrenado. El programa avisa (guardarraíl de GSD,
 dosel cerrado) cuando la fiabilidad baja.
 
-## Camino de deep learning (precisión comercial)
+## 🎯 Modelo entrenado con imágenes REALES (listo para usar)
 
-Incluye un **modelo YOLOv8-seg entrenado** (`models/banano_seg_synth_v1.pt`) y todo el
+Incluye **`models/banano_real_v1.pt`** — un detector YOLOv8 **entrenado sobre ~14 000 tiles
+de imágenes UAV REALES de banano** (dataset abierto AI-BananaMapping, [Zenodo](https://zenodo.org/records/20945958),
+CC-BY-4.0). Una empresa lo usa directamente sobre sus ortofotos, **sin entrenar nada**:
+
+```bash
+pip install -e .[deep]
+banano-detect --input tu_ortofoto.tif --config config.example.yaml --out resultados
+# en el YAML:  model_weights: models/banano_real_v1.pt
+```
+
+**Rendimiento sobre imágenes reales** (4 611 tiles de test nunca vistos): **mAP50 0.411**,
+precisión 0.47, recall 0.46. Son cifras honestas de campo (el banano real es más difícil que
+el sintético). Detalle y alcance: [`docs/modelo-real.md`](docs/modelo-real.md).
+
+## Entrenar tu propio modelo (opcional)
+
+Incluye también un **modelo YOLOv8-seg sintético** (`models/banano_seg_synth_v1.pt`) y todo el
 pipeline reproducible (dataset → entrenamiento → inferencia → integración):
 
 ```bash

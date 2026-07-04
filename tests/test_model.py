@@ -23,6 +23,21 @@ pytestmark = pytest.mark.skipif(not os.path.exists(WEIGHTS), reason="pesos no di
 from banano.model import BananaModel  # noqa: E402
 from banano.synth import synth_plantation  # noqa: E402
 
+REAL_WEIGHTS = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "models", "banano_real_v1.pt",
+)
+
+
+@pytest.mark.skipif(not os.path.exists(REAL_WEIGHTS), reason="modelo real no disponible")
+def test_real_model_loads_and_runs():
+    # el modelo de DETECCION real debe cargar y devolver centroides validos
+    m = BananaModel(REAL_WEIGHTS, conf=0.35, imgsz=640)
+    img, _, _, _ = synth_plantation(H=640, W=640, gsd_cm=3.0, seed=1234)
+    pred = m.predict_mats(img)
+    assert pred["centroids"].ndim == 2 and pred["centroids"].shape[1] == 2
+    assert pred["n"] == len(pred["centroids"]) >= 0
+
 
 def test_model_predict_mats():
     m = BananaModel(WEIGHTS, conf=0.5, imgsz=640)
