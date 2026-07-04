@@ -117,12 +117,17 @@ def _detect_tile_model(img, model, config):
         if px_per_m
         else max(9, min(img.shape[:2]) // 60)
     )
+    twarns = []
     try:
         mask, _ = banana_canopy_mask(
             illumination_correct(to_rgb_float(img)), leaf_scale_px=leaf_scale_px
         )
-    except Exception:
-        mask = np.ones(img.shape[:2], dtype=bool)
+    except Exception as e:
+        # no inventar cobertura: mascara vacia (0% en este tile) + aviso, en vez de
+        # np.ones que reportaria 100% de dosel de forma silenciosa
+        mask = np.zeros(img.shape[:2], dtype=bool)
+        twarns.append("Segmentacion de dosel fallo en un tile; su cobertura no se conto.")
+        logger.warning("banana_canopy_mask fallo en un tile (modelo): %s", e)
 
     mat_eps = max(4, int(1.0 * px_per_m)) if px_per_m else max(8, min(img.shape[:2]) // 25)
     params = {
@@ -130,7 +135,7 @@ def _detect_tile_model(img, model, config):
         "mat_eps_px": mat_eps,
         "model": model.weights,
     }
-    return centers, mask, params, {"spacing_px": None, "strength": 0.0}, []
+    return centers, mask, params, {"spacing_px": None, "strength": 0.0}, twarns
 
 
 def process_orthomosaic(
@@ -186,10 +191,20 @@ def process_orthomosaic(
         overlap,
         gsd,
     )
+    # reparto complementario del solape: lo (floor) + hi (ceil) == overlap, de modo
+    # que los nucleos de tiles vecinos teselen EXACTO con cualquier paridad de overlap.
+    lo = overlap // 2
+    hi = overlap - overlap // 2
+
     all_pts = []
     canopy_px = 0
     core_px = 0
     warns = []
+    if overlap == 0 and len(coords) > 1:
+        warns.append(
+            "overlap=0: sin banda de solape, las macollas en los bordes de tile pueden "
+            "perderse o duplicarse. Usa overlap > 0 (recomendado ~128)."
+        )
     params_sample = None
     grid_sample = {}
     failed_tiles = 0
@@ -217,11 +232,12 @@ def process_orthomosaic(
                 progress(i + 1, len(coords))
             continue
 
-        # nucleo del tile (excluye medio solape salvo en bordes de la imagen)
-        my0 = 0 if y0 == 0 else overlap // 2
-        mx0 = 0 if x0 == 0 else overlap // 2
-        my1 = th if (y0 + th >= H) else th - overlap // 2
-        mx1 = tw if (x0 + tw >= W) else tw - overlap // 2
+        # nucleo del tile (excluye el solape salvo en bordes de la imagen);
+        # lo/hi complementarios evitan solape/hueco de 1px con overlap impar
+        my0 = 0 if y0 == 0 else lo
+        mx0 = 0 if x0 == 0 else lo
+        my1 = th if (y0 + th >= H) else th - hi
+        mx1 = tw if (x0 + tw >= W) else tw - hi
 
         for r, c in tile_centers:
             if my0 <= r < my1 and mx0 <= c < mx1:

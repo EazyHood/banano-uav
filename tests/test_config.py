@@ -68,3 +68,23 @@ def test_from_yaml_not_mapping(tmp_path):
         fh.write("- 1\n- 2\n")
     with pytest.raises(ConfigError):
         PipelineConfig.from_yaml(p)
+
+
+def test_string_numbers_coerced():
+    # YAML puede traer numeros entre comillas -> deben coaccionarse, no crashear.
+    cfg = PipelineConfig.from_dict({"tile": "1024", "overlap": "128", "gsd_cm": "3.0"})
+    assert cfg.tile == 1024 and isinstance(cfg.tile, int)
+    assert cfg.gsd_cm == 3.0 and isinstance(cfg.gsd_cm, float)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("gsd_cm", True),          # bool no debe colarse como numero
+    ("tile", True),
+    ("rel_threshold", "abc"),  # string no numerico
+    ("tile", "muchos"),
+    ("model_weights", 123),    # debe ser str o None
+    ("mode", 5),               # debe ser str
+])
+def test_bad_types_raise_configerror(field, value):
+    with pytest.raises(ConfigError):
+        PipelineConfig.from_dict({field: value})

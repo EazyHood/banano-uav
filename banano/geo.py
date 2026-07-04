@@ -17,6 +17,8 @@ import math
 
 import numpy as np
 
+from .errors import RasterError
+
 try:
     import rasterio
     from rasterio.warp import transform as _warp_transform
@@ -119,7 +121,13 @@ class Raster:
                 opened_geo = False
 
         if not opened_geo:
-            arr = imageio.imread(path)
+            try:
+                arr = imageio.imread(path)
+            except Exception as e:
+                raise RasterError(
+                    f"No se pudo abrir/leer el archivo como imagen: {path!r} ({e}). "
+                    "¿Está corrupto o en un formato no soportado?"
+                ) from e
             if arr.ndim == 2:
                 arr = np.stack([arr] * 3, axis=-1)
             self._array = arr[..., :3]

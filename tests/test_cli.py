@@ -56,3 +56,12 @@ def test_cli_bad_config_exit1(tmp_path):
         fh.write("mode: morado\n")
     code = main(["--input", p, "--config", cfg, "--out", str(tmp_path)])
     assert code == 1
+
+
+def test_cli_corrupt_image_exit1(tmp_path):
+    # archivo con extension .png pero contenido no-imagen -> error controlado (1), no crash (2)
+    p = os.path.join(str(tmp_path), "corrupta.png")
+    with open(p, "w", encoding="utf-8") as fh:
+        fh.write("esto no es una imagen")
+    code = main(["--input", p, "--gsd", "3.0", "--out", str(tmp_path)])
+    assert code == 1

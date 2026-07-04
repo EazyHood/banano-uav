@@ -137,7 +137,8 @@ def detect_banana(
             use_mask=use_mask,
             rel_threshold=rel_threshold,
             use_grid=use_grid,
-        ).validate()
+        )
+    config.validate()  # siempre validar, tambien si el config viene del usuario
 
     _validate_image(rgb)
     rgb = to_rgb_float(rgb)

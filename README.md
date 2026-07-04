@@ -131,10 +131,10 @@ Medido sobre plantaciones sintéticas con **verdad de terreno exacta** (`deep/be
 15 ortomosaicos de 1024 px, GSD 3 cm/px). Reproduce con:
 `python deep/benchmark.py --n 15 --size 1024 --weights models/banano_seg_synth_v1.pt`
 
-| Método | Error de conteo total | MAPE por lote | F1 (localización) |
+| Método | Error de conteo total | MAPE por lote | F1 (localización, tol. estricta 0.5 m) |
 |---|---|---|---|
-| **Modelo YOLOv8-seg** (incluido) | **0.92 %** ✅ | 2.15 % | 0.977 |
-| Clásico (sin datos etiquetados) | 4.77 % | 4.72 % | 0.936 |
+| **Modelo YOLOv8-seg** (incluido) | **0.92 %** ✅ | 2.15 % | 0.975 |
+| Clásico (sin datos etiquetados) | 4.77 % | 4.72 % | 0.825 |
 
 - El **modelo entrenado baja del 1 % de error de conteo** sobre datos con verdad de terreno.
 - El **clásico** ronda el 5 % pero **no necesita datos etiquetados** — línea base inmediata.
@@ -194,7 +194,7 @@ models/          pesos entrenados (banano_seg_synth_v1.pt)
 scripts/         demo.py · run.py · make_example.py
 deep/            make_synth_dataset · train_yolo · infer_yolo · benchmark
 docs/            guía de campo · API · estado del arte
-tests/           pruebas (pytest, ~44)
+tests/           pruebas (pytest, ~54, cobertura ~87%)
 Dockerfile · pyproject.toml · config.example.yaml · .github/workflows/ci.yml
 ```
 

@@ -79,7 +79,10 @@ def run_bench(n, size, gsd, weights=None, model_conf=0.6, seed0=900000):
             r = process_orthomosaic(raster, config=cfg, progress=None)
             raster.close()
             centroids = np.array([m["centroid"] for m in r.mats]) if r.mats else np.empty((0, 2))
-            tol = r.params.get("mat_eps_px", 25)
+            # tolerancia FIJA y estricta: 0.5 m (media macolla), independiente del
+            # detector, para no inflar el F1. Menor que la mitad de la separacion
+            # entre plantas (>= 1.15 m), asi que no empareja con la macolla vecina.
+            tol = 0.5 * (100.0 / gsd)
             tp, fp, fn, _ = match_points(centroids, gt_mats, tol)
             _, _, f1 = prf(tp, fp, fn)
             res[name]["gt"].append(n_gt)

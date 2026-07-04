@@ -47,9 +47,55 @@ class PipelineConfig:
 
     VALID_MODES = ("bright", "dark", "both")
 
+    def _coerce_numeric(self, errs):
+        """Coacciona campos numericos (YAML entre comillas -> str) y rechaza tipos raros.
+
+        Rechaza bool (subclase de int) para que True/False no se cuelen como 1/0.
+        """
+
+        def cast(name, caster, allow_none=False):
+            v = getattr(self, name)
+            if v is None:
+                if not allow_none:
+                    errs.append(f"{name} no puede ser None")
+                return
+            if isinstance(v, bool) or not isinstance(v, (int, float, str)):
+                errs.append(f"{name} debe ser numerico, no {type(v).__name__} ({v!r})")
+                return
+            try:
+                setattr(self, name, caster(v))
+            except (TypeError, ValueError):
+                errs.append(f"{name} debe ser {caster.__name__}, no {v!r}")
+
+        cast("gsd_cm", float, allow_none=True)
+        for name in (
+            "assumed_spacing_m",
+            "leaf_len_m",
+            "pseudostem_sep_m",
+            "rel_threshold",
+            "grid_min_strength",
+            "model_conf",
+        ):
+            cast(name, float)
+        for name in ("tile", "overlap"):
+            cast(name, int)
+
     def validate(self) -> PipelineConfig:
-        """Valida rangos y coherencia. Lanza ConfigError si algo esta mal."""
-        errs = []
+        """Valida tipos, rangos y coherencia. Lanza ConfigError si algo esta mal."""
+        errs: list[str] = []
+
+        # 1. tipos: coacciona numericos y valida strings/None antes de comparar
+        self._coerce_numeric(errs)
+        if self.model_weights is not None and not isinstance(self.model_weights, str):
+            errs.append(
+                f"model_weights debe ser una ruta (str) o None, no {type(self.model_weights).__name__}"
+            )
+        if not isinstance(self.mode, str):
+            errs.append(f"mode debe ser str, no {type(self.mode).__name__}")
+        if errs:  # cortar antes de comparar rangos sobre valores de tipo invalido
+            raise ConfigError("Configuracion invalida:\n  - " + "\n  - ".join(errs))
+
+        # 2. rangos y coherencia
         if self.gsd_cm is not None and self.gsd_cm <= 0:
             errs.append(f"gsd_cm debe ser > 0 (o None), no {self.gsd_cm}")
         if self.mode not in self.VALID_MODES:

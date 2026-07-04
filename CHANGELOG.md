@@ -31,6 +31,19 @@ Salto a nivel de producción ("AAA"): robustez, modelo entrenado, benchmark y em
   el piso global de Otsu.
 - Entrenamiento en Windows: `workers=0` evita el error CUDA "resource already mapped".
 
+### Corregido (2ª revisión adversarial, 11 bugs confirmados)
+- **Config**: valores no numéricos (strings de YAML entre comillas, bool, tipos raros) daban
+  `TypeError` crudo en vez de `ConfigError`; ahora se coaccionan/validan tipos. `model_weights`
+  y `mode` validan su tipo.
+- **CLI/geo**: una imagen corrupta lanzaba `ValueError` crudo (código 2); ahora `Raster` lanza
+  `RasterError` controlado (código 1).
+- **pipeline**: `detect_banana` no validaba un `config` externo; ahora siempre lo valida.
+- **ortho**: reparto complementario del solape (floor/ceil) evita solape/hueco de 1 px con
+  `overlap` impar; aviso con `overlap=0`; el fallo de segmentación en el camino de modelo ya
+  no infla la cobertura al 100 % (cuenta 0 + aviso).
+- **benchmark**: la tolerancia de emparejamiento (1.0 m) inflaba el F1; ahora es fija y
+  estricta (0.5 m). Números honestos re-medidos.
+
 ## [1.0.0] — 2026-07-03
 
 Primera versión pública, utilizable de punta a punta con un dron (flujo post-vuelo).
