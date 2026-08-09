@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "banano-drone"
-version = "2.1.0"
+version = "2.2.0"
 description = "Identificacion y conteo de cultivo de banano en ortomosaicos de dron (libre, AGPL-3.0)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,7 +32,7 @@ dependencies = [
 [project.optional-dependencies]
 geo = ["rasterio>=1.3"]
 gis = ["geopandas>=0.14"]
-deep = ["ultralytics>=8.1"]
+deep = ["ultralytics>=8.4"]  # >=8.4: familias YOLO26/YOLO11 (el modelo v12 es YOLO26)
 dev = ["pytest>=7.0", "pytest-cov>=4.0", "ruff>=0.6", "mypy>=1.8", "types-PyYAML"]
 
 [project.urls]

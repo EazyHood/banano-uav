@@ -1,0 +1,8 @@
+{
+  "split": "test (real, retenido)",
+  "mAP50": 0.4108,
+  "mAP50_95": 0.164,
+  "precision": 0.472,
+  "recall": 0.458,
+  "n_imagenes_test": null
+}

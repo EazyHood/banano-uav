@@ -100,6 +100,10 @@ banano-detect --input example/plantacion.tif --out resultados
 --mode both          centro de simetría: bright / dark / both
 --threshold 0.30     umbral de picos (baja si detecta de menos, sube si de más)
 --no-mask            no restringir al dosel segmentado (si la segmentación falla)
+--weights m.pt       pesos YOLO: activa el camino de deep learning sin editar YAML
+--model-conf 0.30    umbral de confianza del modelo (recomendado por modelo, ver YAML)
+--augment            test-time augmentation del modelo (más preciso, más lento)
+--device cpu         fuerza dispositivo del modelo ('cpu' en máquinas sin GPU)
 -v / --quiet         más/menos detalle de log
 --version            versión
 ```
@@ -115,7 +119,9 @@ banano-detect --input orto.tif --config mi_config.yaml --out resultados
 
 - 📘 [**Guía de campo**](docs/guia-campo.md) — cómo volar, generar el ortomosaico e interpretar resultados (para agrónomos y empresas).
 - 🐍 [**Referencia de API**](docs/api.md) — usar `banano` como librería Python.
-- 📚 [**Estado del arte**](docs/estado-del-arte.md) — fundamento científico y referencias.
+- 📚 [**Estado del arte**](docs/estado-del-arte.md) — fundamento científico y referencias (actualizado 2026-08).
+- 🌱 [**Datos reales**](docs/datos-reales.md) — procedencia, licencias, curación anti-fugas y protocolo de evaluación.
+- 🤖 [**Modelo real**](docs/modelo-real.md) — alcance y cifras honestas de los modelos entrenados con imágenes reales.
 
 ## Cómo funciona (pipeline híbrido, sin datos etiquetados)
 
@@ -207,12 +213,15 @@ python deep/benchmark.py --n 20 --size 1024 --weights models/banano_seg_synth_v1
 ```
 banano/          indices · segment · grid · radial · centers · mats · pipeline
                  geo (GeoTIFF) · ortho (tiles+dedup) · report (CSV/GeoJSON/HTML) · cli
-                 config · errors · logconf · model (YOLOv8-seg)
-models/          pesos entrenados (banano_seg_synth_v1.pt)
+                 config · errors · logconf · model (YOLO det/seg)
+models/          pesos entrenados (banana_multifarm_v12.pt · banano_real_v1.pt ·
+                 banano_seg_synth_v1.pt)
 scripts/         demo.py · run.py · make_example.py
 deep/            make_synth_dataset · train_yolo · infer_yolo · benchmark
-docs/            guía de campo · API · estado del arte
-tests/           pruebas (pytest, ~54, cobertura ~87%)
+                 train_v12 · eval_record · eval_count (evaluación registrada)
+real_eval/       registros JSON de cada evaluación (fecha, pesos, datos, métricas)
+docs/            guía de campo · API · estado del arte · datos reales · modelo real
+tests/           pruebas (pytest, 54, cobertura 83-87% según extras)
 Dockerfile · pyproject.toml · config.example.yaml · .github/workflows/ci.yml
 ```
 

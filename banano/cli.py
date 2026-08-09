@@ -57,6 +57,28 @@ def build_parser():
     ap.add_argument("--mode", default=None, choices=["bright", "dark", "both"])
     ap.add_argument("--threshold", type=float, default=None, help="Umbral relativo de picos (0-1)")
     ap.add_argument("--no-mask", action="store_true", help="No restringir al dosel segmentado")
+    ap.add_argument(
+        "--weights",
+        "-w",
+        default=None,
+        help="Pesos YOLO (.pt) para el camino de deep learning; sin esto, camino clasico",
+    )
+    ap.add_argument(
+        "--model-conf",
+        type=float,
+        default=None,
+        help="Umbral de confianza del modelo (ver config.example.yaml por modelo)",
+    )
+    ap.add_argument(
+        "--augment",
+        action="store_true",
+        help="Test-time augmentation del modelo (mas preciso, mas lento)",
+    )
+    ap.add_argument(
+        "--device",
+        default=None,
+        help="Dispositivo del modelo: 'cpu', '0', 'cuda:0' (por defecto, automatico)",
+    )
     ap.add_argument("-v", "--verbose", action="count", default=0, help="Mas detalle (-v, -vv)")
     ap.add_argument("--quiet", action="store_true", help="Solo avisos y errores")
     ap.add_argument("--version", action="version", version=f"banano-drone {__version__}")
@@ -84,6 +106,14 @@ def _load_config(args) -> PipelineConfig:
         cfg.rel_threshold = args.threshold
     if args.no_mask:
         cfg.use_mask = False
+    if args.weights is not None:
+        cfg.model_weights = args.weights
+    if args.model_conf is not None:
+        cfg.model_conf = args.model_conf
+    if args.augment:
+        cfg.model_augment = True
+    if args.device is not None:
+        cfg.model_device = args.device
     return cfg.validate()
 
 
@@ -92,6 +122,8 @@ def run(args) -> int:
 
     if not os.path.isfile(args.input):
         raise InputError(f"El archivo de entrada no existe: {args.input}")
+    if cfg.model_weights and not os.path.isfile(cfg.model_weights):
+        raise InputError(f"Los pesos del modelo no existen: {cfg.model_weights}")
     if not args.input.lower().endswith(_IMG_EXT):
         logger.warning("Extension no habitual '%s'; se intentara abrir de todos modos.", args.input)
 

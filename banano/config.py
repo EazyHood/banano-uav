@@ -42,9 +42,10 @@ class PipelineConfig:
     overlap: int = 128  # solape entre tiles (px)
 
     # --- modelo de deep learning (opcional) ---
-    model_weights: str | None = None  # ruta a pesos YOLOv8-seg; None = clasico
-    model_conf: float = 0.55  # umbral de confianza del modelo (calibrado para conteo)
+    model_weights: str | None = None  # ruta a pesos YOLO (det/seg); None = clasico
+    model_conf: float = 0.55  # umbral de confianza (0.55 = sintetico; ver config.example.yaml)
     model_augment: bool = False  # test-time augmentation (mas preciso, mas lento)
+    model_device: str | None = None  # None = auto; 'cpu' | '0' | 'cuda:0' fuerza dispositivo
 
     VALID_MODES = ("bright", "dark", "both")
 
@@ -90,6 +91,11 @@ class PipelineConfig:
         if self.model_weights is not None and not isinstance(self.model_weights, str):
             errs.append(
                 f"model_weights debe ser una ruta (str) o None, no {type(self.model_weights).__name__}"
+            )
+        if self.model_device is not None and not isinstance(self.model_device, str):
+            errs.append(
+                f"model_device debe ser str ('cpu', '0', 'cuda:0') o None, "
+                f"no {type(self.model_device).__name__}"
             )
         if not isinstance(self.mode, str):
             errs.append(f"mode debe ser str, no {type(self.mode).__name__}")

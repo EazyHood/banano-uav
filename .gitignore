@@ -14,9 +14,12 @@ resultados*/
 example/
 dataset/
 runs/
+runs[0-9]*/
+runs_pose/
 benchmark*.json
 quickstart_out/
 *.pt
 !models/*.pt
 realdata/
-real_eval/
+# real_eval/ SÍ se versiona: son los registros JSON de cada evaluación (pesos,
+# datos, fecha, métricas). Antes estaba ignorado y las cifras se perdían.

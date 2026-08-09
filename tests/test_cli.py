@@ -58,6 +58,29 @@ def test_cli_bad_config_exit1(tmp_path):
     assert code == 1
 
 
+def test_cli_weights_flags_map_to_config(tmp_path):
+    # --weights/--model-conf/--augment deben aterrizar en PipelineConfig
+    from banano.cli import _load_config, build_parser
+
+    w = os.path.join(str(tmp_path), "m.pt")
+    with open(w, "wb") as fh:
+        fh.write(b"x")
+    args = build_parser().parse_args(
+        ["--input", "x.png", "--weights", w, "--model-conf", "0.4", "--augment"]
+    )
+    cfg = _load_config(args)
+    assert cfg.model_weights == w
+    assert cfg.model_conf == 0.4
+    assert cfg.model_augment is True
+
+
+def test_cli_missing_weights_exit1(tmp_path):
+    # pesos inexistentes deben fallar limpio (exit 1) antes de cargar el modelo
+    p = _make_png(tmp_path)
+    code = main(["--input", p, "--weights", os.path.join(str(tmp_path), "no.pt")])
+    assert code == 1
+
+
 def test_cli_corrupt_image_exit1(tmp_path):
     # archivo con extension .png pero contenido no-imagen -> error controlado (1), no crash (2)
     p = os.path.join(str(tmp_path), "corrupta.png")

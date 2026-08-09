@@ -63,6 +63,30 @@ Cultivos "fáciles" para dimensionar la brecha: palma **F1 ≈ 92.8 %**; mango *
 - Roboflow Universe — buscar "banana plantation / banana tree counting" (varios datasets anotados).
 - Banana Fusarium/Xanthomonas wilt (multiespectral, para enfermedad): SciDB, Nature Sci. Data 2025.
 
+## Actualización 2026-08: qué cambió y qué usamos
+
+- **YOLO26 (Ultralytics, estable ene-2026)**: end-to-end **sin NMS**, cabeza sin DFL,
+  *ProgLoss* y **STAL** (asignación de etiquetas consciente de objetos pequeños) —
+  relevante directo para plantas pequeñas en nadir. El modelo v12 de este repo es
+  YOLO26m. Docs: https://docs.ultralytics.com/models/yolo26/
+- **RF-DETR (Roboflow, ICLR 2026, Apache-2.0)**: transformer con backbone DINOv2,
+  SOTA en transferencia con pocos datos (RF100-VL). Candidato natural a segundo
+  modelo de un ensemble con WBF; fine-tuning viable en 8 GB (nano/small/medium).
+  https://github.com/roboflow/rf-detr
+- **SAHI** (inferencia por slices con fusión propia): compatible con los modelos
+  NMS-free; +5-10 AP típico en objetos pequeños de imágenes aéreas grandes sin
+  reentrenar. Este repo ya tesela con núcleo+solape propio; SAHI es la alternativa
+  si se procesa fuera del pipeline. https://docs.ultralytics.com/guides/sahi-tiled-inference
+- **Weighted Boxes Fusion** (`ensemble-boxes`): para ensembles multi-modelo o TTA
+  multi-escala; en conteo denso reduce dobles detecciones mejor que NMS.
+- **Lección medida en este proyecto (2026-08-09)**: el mAP50 0.75 "cross-finca" de
+  un modelo multi-finca era sobre imágenes no vistas de fincas *vistas*; sobre una
+  finca *jamás vista* el mismo modelo cayó a 0.005-0.17. La palanca dominante es la
+  **diversidad de fincas en el train**, no la arquitectura. Ver `docs/datos-reales.md`.
+- Papers banano-UAV 2025-2026 (CMC 2025, AI-BananaMapping/Springer 2026): sin pesos
+  públicos que superen lo entrenado aquí; el mejor activo sigue siendo el dataset
+  multi-finca propio.
+
 ## Fuentes principales
 
 - Neupane et al. 2019, *Deep learning based banana plant detection and counting… UAV RGB*, PLOS ONE — https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0223906

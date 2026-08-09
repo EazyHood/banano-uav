@@ -20,9 +20,13 @@ tile: 1024              # tamaño de tile en píxeles.
 overlap: 128            # solape entre tiles (evita cortar plantas en los bordes).
 
 # --- Modelo de deep learning (opcional) ---
-# Para ortofotos REALES usa el modelo entrenado con imágenes reales:
-#   model_weights: models/banano_real_v1.pt   (model_conf ~0.35)
-# Para el sintético de segmentación de macollas: models/banano_seg_synth_v1.pt (conf ~0.65)
+# También disponible por CLI: --weights, --model-conf, --augment.
+# Umbral de confianza recomendado SEGÚN EL MODELO (el default del paquete es 0.55,
+# calibrado para el sintético):
+#   models/banana_multifarm_v12.pt  -> modelo REAL multi-finca (recomendado), conf ~0.30
+#   models/banano_real_v1.pt        -> modelo real v1 (histórico), conf ~0.35
+#   models/banano_seg_synth_v1.pt   -> segmentación sintética de macollas, conf ~0.65
 model_weights: null     # null = pipeline clásico sin modelo.
 model_conf: 0.35        # umbral de confianza del modelo.
 model_augment: false    # test-time augmentation: más preciso, más lento.
+model_device: null      # null = auto; 'cpu' fuerza CPU (máquinas sin GPU); '0' = GPU 0.

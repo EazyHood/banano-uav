@@ -76,3 +76,47 @@ def test_tiling_dedup_no_double_count(tmp_path):
     raster.close()
     # tolerancia del 30% entre teselado fino y paso único
     assert abs(res_tiled.n_mats - res_single.n_mats) <= 0.3 * res_single.n_mats + 5
+
+
+class _StubModel:
+    """Modelo falso para probar el camino de modelo sin ultralytics.
+
+    Devuelve dos detecciones casi coincidentes: la de MENOR confianza primero,
+    para que una deduplicacion primero-llega-gana conserve la equivocada.
+    """
+
+    def __init__(self, weights, conf=0.5, imgsz=640, augment=False, device=None):
+        self.weights = weights
+        self.conf = conf
+        self.imgsz = imgsz
+        self.augment = augment
+        self.device = device
+
+    def predict_mats(self, image, conf=None):
+        import numpy as np
+
+        return {
+            "centroids": np.array([[100.0, 100.0], [100.0, 106.0]]),
+            "confidences": np.array([0.4, 0.9]),
+            "boxes_xyxy": np.array(
+                [[80.0, 80.0, 120.0, 120.0], [86.0, 80.0, 126.0, 120.0]]
+            ),
+            "n": 2,
+        }
+
+
+def test_model_dedup_keeps_highest_confidence(tmp_path, monkeypatch):
+    # En un duplicado (dos detecciones a <mat_eps/2), debe sobrevivir la de mayor
+    # confianza, no la primera en llegar.
+    import banano.model
+    from banano.config import PipelineConfig
+
+    monkeypatch.setattr(banano.model, "BananaModel", _StubModel)
+    path, _, _ = _make_png(tmp_path, size=300, seed=11)
+    cfg = PipelineConfig(gsd_cm=3.0, tile=512, overlap=64, model_weights="stub.pt").validate()
+    raster = Raster(path, gsd_cm=3.0)
+    res = process_orthomosaic(raster, config=cfg)
+    raster.close()
+    assert res.n_mats == 1
+    kept_col = res.mats[0]["centroid"][1]
+    assert abs(kept_col - 106.0) < 1e-6, f"sobrevivio la de menor confianza (col={kept_col})"

@@ -1,0 +1,13 @@
+{
+  "fecha": "2026-08-09T12:51:49",
+  "weights": "C:\\Users\\jhona\\banano-drone\\runs10\\banana_v10_multifarm\\weights\\best.pt",
+  "weights_sha256_16": "8e4b7d1f7eba3651",
+  "data": "C:\\Users\\jhona\\banano-drone\\realdata\\holdout.yaml",
+  "imgsz": 768,
+  "metrics": {
+    "mAP50": 0.746,
+    "mAP50_95": 0.3631,
+    "precision": 0.7975,
+    "recall": 0.673
+  }
+}

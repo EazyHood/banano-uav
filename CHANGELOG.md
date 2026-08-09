@@ -3,24 +3,25 @@
 Todas las novedades notables de este proyecto se documentan aquí.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
-## [2.1.0] — 2026-07-03
+## [2.1.0] — 2026-07-03 / 2026-07-04
 
-Sube la precisión por encima del 98 % de acierto en las tres métricas.
+Sube la precisión por encima del 98 % de acierto en las tres métricas (sobre sintético)
+y añade el primer modelo entrenado con imágenes reales. (Nota: esta versión se publicó
+en dos tandas; antes figuraba como dos secciones [2.1.0] separadas.)
 
 ### Cambiado
 - **Modelo mayor**: YOLOv8**s**-seg (11.8 M par.) entrenado con dataset ampliado (400+80
   tiles, ~17k instancias, 100 épocas). Sustituye al yolov8n.
 - **Benchmark (25 ortomosaicos, tol. estricta 0.5 m)**: **F1 0.993 (99.3 %)**, MAPE **1.23 %**,
   error de conteo total **1.23 %** — las tres cumplen ≥98 % / ≤2 %. (Clásico: F1 0.805, 4.4 %.)
-- `model_conf` por defecto calibrado a **0.55**; `overlap` por defecto del benchmark a 128.
+  Estas cifras son del modelo sintético sobre datos sintéticos.
+- `model_conf` por defecto calibrado a **0.55** (sintético); `overlap` por defecto del
+  benchmark a 128.
 
 ### Añadido
-- **Test-time augmentation** opcional (`model_augment`, `--augment`): más precisión en
-  inferencia a cambio de velocidad.
-
-## [2.1.0] — 2026-07-04
-
-### Añadido
+- **Test-time augmentation** opcional (`model_augment` en el YAML de configuración): más
+  precisión en inferencia a cambio de velocidad. (El flag `--augment` de la CLI llegó
+  en 2.2.0.)
 - **Modelo entrenado con imágenes UAV REALES de banano** (`models/banano_real_v1.pt`): detector
   YOLOv8 entrenado sobre ~14 000 tiles reales (dataset abierto AI-BananaMapping, Zenodo
   20945958, CC-BY-4.0). Listo para usar sobre ortofotos reales **sin entrenar**.

@@ -109,6 +109,7 @@ def _detect_tile_model(img, model, config):
 
     pred = model.predict_mats(img)
     centers = pred["centroids"]
+    confs = pred["confidences"]
 
     gsd = config.gsd_cm
     px_per_m = (100.0 / gsd) if (gsd and gsd > 0) else None
@@ -135,7 +136,7 @@ def _detect_tile_model(img, model, config):
         "mat_eps_px": mat_eps,
         "model": model.weights,
     }
-    return centers, mask, params, {"spacing_px": None, "strength": 0.0}, twarns
+    return centers, confs, mask, params, {"spacing_px": None, "strength": 0.0}, twarns
 
 
 def process_orthomosaic(
@@ -183,8 +184,9 @@ def process_orthomosaic(
             conf=config.model_conf,
             imgsz=min(tile, 1280),
             augment=config.model_augment,
+            device=config.model_device,
         )
-        logger.info("Usando modelo YOLOv8-seg: %s", config.model_weights)
+        logger.info("Usando modelo YOLO: %s", config.model_weights)
 
     coords = [(y, x) for y in _tile_starts(H, tile, step) for x in _tile_starts(W, tile, step)]
     logger.info(
@@ -202,6 +204,7 @@ def process_orthomosaic(
     hi = overlap - overlap // 2
 
     all_pts = []
+    all_confs = []
     canopy_px = 0
     core_px = 0
     warns = []
@@ -222,12 +225,13 @@ def process_orthomosaic(
         try:
             img = raster.read_window(y0, x0, th, tw)
             if model is not None:
-                tile_centers, tile_mask, tparams, tgrid, twarns = _detect_tile_model(
+                tile_centers, tile_confs, tile_mask, tparams, tgrid, twarns = _detect_tile_model(
                     img, model, config
                 )
             else:
                 res = detect_banana(img, config=config)
                 tile_centers = res.centers
+                tile_confs = np.ones(len(tile_centers))
                 tile_mask = res.mask
                 tparams, tgrid, twarns = res.params, res.grid, res.warnings
         except Exception as e:  # un tile malo no debe tumbar el lote
@@ -244,9 +248,10 @@ def process_orthomosaic(
         my1 = th if (y0 + th >= H) else th - hi
         mx1 = tw if (x0 + tw >= W) else tw - hi
 
-        for r, c in tile_centers:
+        for (r, c), cf in zip(tile_centers, tile_confs):
             if my0 <= r < my1 and mx0 <= c < mx1:
                 all_pts.append((y0 + r, x0 + c))
+                all_confs.append(float(cf))
 
         core_mask = tile_mask[my0:my1, mx0:mx1]
         canopy_px += int(core_mask.sum())
@@ -269,7 +274,11 @@ def process_orthomosaic(
     mat_eps = params_sample["mat_eps_px"] if params_sample else 20
 
     if model is not None:
-        # el modelo ya devuelve macollas: deduplicar por escala de macolla, sin DBSCAN
+        # el modelo ya devuelve macollas: deduplicar por escala de macolla, sin DBSCAN.
+        # Orden por confianza descendente: en un duplicado del solape entre tiles
+        # sobrevive la deteccion de mayor confianza (antes ganaba la primera en llegar).
+        if len(pts):
+            pts = pts[np.argsort(-np.asarray(all_confs))]
         pts = _dedup(pts, 0.5 * mat_eps)
         mats = [{"centroid": p, "n_pseudostems": 1, "members": p[None, :]} for p in pts]
         labels = np.arange(len(mats))

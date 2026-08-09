@@ -29,22 +29,30 @@ REAL_WEIGHTS = os.path.join(
 )
 
 
+# En esta suite el modelo corre SIEMPRE en CPU: los tests no deben depender de una
+# GPU (ni pelearse con un entrenamiento en curso que la tenga ocupada).
+DEVICE = "cpu"
+
+
 @pytest.mark.skipif(not os.path.exists(REAL_WEIGHTS), reason="modelo real no disponible")
 def test_real_model_loads_and_runs():
     # el modelo de DETECCION real debe cargar y devolver centroides validos
-    m = BananaModel(REAL_WEIGHTS, conf=0.35, imgsz=640)
+    m = BananaModel(REAL_WEIGHTS, conf=0.35, imgsz=640, device=DEVICE)
     img, _, _, _ = synth_plantation(H=640, W=640, gsd_cm=3.0, seed=1234)
     pred = m.predict_mats(img)
     assert pred["centroids"].ndim == 2 and pred["centroids"].shape[1] == 2
+    assert pred["boxes_xyxy"].shape == (pred["n"], 4) or pred["n"] == 0
     assert pred["n"] == len(pred["centroids"]) >= 0
 
 
 def test_model_predict_mats():
-    m = BananaModel(WEIGHTS, conf=0.5, imgsz=640)
+    m = BananaModel(WEIGHTS, conf=0.5, imgsz=640, device=DEVICE)
     img, _, gt_mats, _ = synth_plantation(H=640, W=640, gsd_cm=3.0, seed=770001)
     pred = m.predict_mats(img)
     assert pred["centroids"].shape[1] == 2
     assert pred["n"] == len(pred["centroids"])
+    # las cajas acompanan a los centroides (para fusion/filtrado por area)
+    assert pred["boxes_xyxy"].shape == (pred["n"], 4)
     # el conteo debe estar en un rango razonable de la verdad de terreno
     assert 0.5 * len(gt_mats) <= pred["n"] <= 1.6 * len(gt_mats), (pred["n"], len(gt_mats))
 
@@ -60,7 +68,8 @@ def test_model_ortho_path(tmp_path):
     p = os.path.join(str(tmp_path), "o.png")
     imageio.imwrite(p, img)
     cfg = PipelineConfig(gsd_cm=3.0, tile=640, overlap=96,
-                         model_weights=WEIGHTS, model_conf=0.5).validate()
+                         model_weights=WEIGHTS, model_conf=0.5,
+                         model_device=DEVICE).validate()
     raster = Raster(p, gsd_cm=3.0)
     res = process_orthomosaic(raster, config=cfg)
     raster.close()

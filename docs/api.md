@@ -45,10 +45,20 @@ res = process_orthomosaic(raster, config=cfg)
 ```python
 from banano import PipelineConfig, Raster, process_orthomosaic
 
-cfg = PipelineConfig(gsd_cm=2.5, model_weights="models/banano_seg_synth_v1.pt", model_conf=0.6)
+cfg = PipelineConfig(
+    gsd_cm=2.5,
+    model_weights="models/banana_multifarm_v12.pt",  # cualquier YOLO det/seg (v8/11/26)
+    model_conf=0.30,        # umbral por modelo: ver config.example.yaml
+    model_device=None,      # None = auto; "cpu" fuerza CPU; "0" fuerza GPU 0
+    model_augment=False,    # test-time augmentation
+)
 raster = Raster("orto.tif")
 res = process_orthomosaic(raster, config=cfg)   # usa el modelo para detectar macollas
 ```
+
+En un duplicado del solape entre tiles sobrevive la detección de **mayor
+confianza**. `BananaModel.predict_mats()` devuelve, además de `centroids` y
+`confidences`, las cajas `boxes_xyxy` (para fusión WBF, filtrado por área, etc.).
 
 ## Objetos principales
 
