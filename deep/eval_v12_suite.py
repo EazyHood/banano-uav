@@ -126,19 +126,25 @@ def main() -> None:
               f"{m['precision']:6.3f} {m['recall']:6.3f}{_fmt_delta(m['mAP50'], prev)}")
 
     if not args.sin_conteo:
-        print(f"\n{'protocolo':12s} {'conf*':>6s} {'err_total':>10s} {'MAPE':>7s}"
-              f"   pred/gt")
+        # Dos columnas de error a proposito: la in-sample (umbral elegido mirando el
+        # mismo conjunto) y la honesta (calibracion cruzada). La publicable es la 2a.
+        print(f"\n{'protocolo':12s} {'conf*':>6s} {'err_insample':>13s} "
+              f"{'err_HONESTO':>12s} {'MAPE_hon':>9s}   pred/gt (honesto)")
         for clave, _, _ in protos:
             rec = _load(f"{args.tag}_{clave}_count")
-            if not rec or "mejor" not in rec:
+            if not rec or not rec.get("mejor"):
                 continue
             b = rec["mejor"]
-            err = b["error_conteo_total"]
-            mape = b["MAPE_por_imagen"]
+            h = rec.get("honesto") or {}
+            nan = float("nan")
+            err_h = h.get("error_conteo_total")
+            mape_h = h.get("MAPE_por_imagen")
+            par = (f"{h['total_pred']}/{h['total_gt']}"
+                   if h.get("total_gt") else f"{b['total_pred']}/{b['total_gt']} (in-sample)")
             print(f"{clave:12s} {b['conf']:6.2f} "
-                  f"{(err if err is not None else float('nan')):10.4f} "
-                  f"{(mape if mape is not None else float('nan')):7.4f}"
-                  f"   {b['total_pred']}/{b['total_gt']}")
+                  f"{(b['error_conteo_total'] if b['error_conteo_total'] is not None else nan):13.4f} "
+                  f"{(err_h if err_h is not None else nan):12.4f} "
+                  f"{(mape_h if mape_h is not None else nan):9.4f}   {par}")
 
     if fallos:
         print(f"\n⚠  {fallos} evaluación(es) fallaron; el resumen solo cubre las que no.")
