@@ -50,7 +50,7 @@ def _agg(counts_gt, counts_pred, f1s):
     }
 
 
-def run_bench(n, size, gsd, weights=None, model_conf=0.6, augment=False,
+def run_bench(n, size, gsd, weights=None, model_conf=0.55, augment=False,
               tile=640, overlap=128, seed0=900000):
     tmp = tempfile.mkdtemp()
     cfg_classical = PipelineConfig(gsd_cm=gsd, tile=tile, overlap=overlap).validate()
@@ -119,7 +119,7 @@ def main():
     ap.add_argument("--size", type=int, default=1024)
     ap.add_argument("--gsd", type=float, default=3.0)
     ap.add_argument("--weights", default=None, help="Pesos YOLOv8-seg (opcional)")
-    ap.add_argument("--model-conf", type=float, default=0.6)
+    ap.add_argument("--model-conf", type=float, default=0.55)  # mismo default que PipelineConfig
     ap.add_argument("--augment", action="store_true", help="Test-time augmentation")
     ap.add_argument("--tile", type=int, default=640)
     ap.add_argument("--overlap", type=int, default=128)
