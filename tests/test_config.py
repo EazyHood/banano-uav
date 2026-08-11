@@ -37,6 +37,26 @@ def test_invalid_ranges(field, value):
         PipelineConfig(**{field: value}).validate()
 
 
+@pytest.mark.parametrize("value", [700, 769, 16, 0, -768])
+def test_model_imgsz_invalid(value):
+    # Ni por debajo de 32 ni fuera del multiplo de 32: YOLO redondearia por su cuenta
+    # y la resolucion real de inferencia seria otra sin que nadie se entere.
+    with pytest.raises(ConfigError):
+        PipelineConfig(model_imgsz=value).validate()
+
+
+@pytest.mark.parametrize("value", [None, 32, 640, 768, 1280])
+def test_model_imgsz_valid(value):
+    cfg = PipelineConfig(model_imgsz=value).validate()
+    assert cfg.model_imgsz == value
+
+
+def test_model_imgsz_string_coerced():
+    # YAML puede traer el numero entre comillas.
+    cfg = PipelineConfig.from_dict({"model_imgsz": "768"})
+    assert cfg.model_imgsz == 768 and isinstance(cfg.model_imgsz, int)
+
+
 def test_overlap_ge_tile_sanitized():
     cfg = PipelineConfig(tile=100, overlap=200).validate()
     assert cfg.overlap < cfg.tile
@@ -84,6 +104,8 @@ def test_string_numbers_coerced():
     ("tile", "muchos"),
     ("model_weights", 123),    # debe ser str o None
     ("mode", 5),               # debe ser str
+    ("model_imgsz", True),     # bool no debe colarse como numero
+    ("model_imgsz", "grande"),
 ])
 def test_bad_types_raise_configerror(field, value):
     with pytest.raises(ConfigError):

@@ -74,6 +74,25 @@ def test_cli_weights_flags_map_to_config(tmp_path):
     assert cfg.model_augment is True
 
 
+def test_cli_model_imgsz_flag():
+    # --model-imgsz debe aterrizar en la config; sin la bandera, queda en None
+    # (y entonces ortho.py la deduce del tile).
+    from banano.cli import _load_config, build_parser
+
+    args = build_parser().parse_args(["--input", "x.png", "--model-imgsz", "768"])
+    assert _load_config(args).model_imgsz == 768
+
+    args = build_parser().parse_args(["--input", "x.png"])
+    assert _load_config(args).model_imgsz is None
+
+
+def test_cli_bad_model_imgsz_exit1(tmp_path):
+    # 700 no es multiplo de 32: debe salir 1 con mensaje, no colarse hasta el modelo.
+    p = _make_png(tmp_path)
+    code = main(["--input", p, "--gsd", "3.0", "--model-imgsz", "700", "--out", str(tmp_path)])
+    assert code == 1
+
+
 def test_cli_missing_weights_exit1(tmp_path):
     # pesos inexistentes deben fallar limpio (exit 1) antes de cargar el modelo
     p = _make_png(tmp_path)

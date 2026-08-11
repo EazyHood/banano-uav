@@ -46,6 +46,10 @@ class PipelineConfig:
     model_conf: float = 0.55  # umbral de confianza (0.55 = sintetico; ver config.example.yaml)
     model_augment: bool = False  # test-time augmentation (mas preciso, mas lento)
     model_device: str | None = None  # None = auto; 'cpu' | '0' | 'cuda:0' fuerza dispositivo
+    # Resolucion de inferencia. None = deducirla del tile (min(tile, 1280)), que es lo
+    # que se hacia siempre. Fijarla importa: un modelo rinde mejor cerca de la resolucion
+    # a la que se entreno (los modelos multi-finca de este repo se entrenaron a 768).
+    model_imgsz: int | None = None
 
     VALID_MODES = ("bright", "dark", "both")
 
@@ -81,6 +85,7 @@ class PipelineConfig:
             cast(name, float)
         for name in ("tile", "overlap"):
             cast(name, int)
+        cast("model_imgsz", int, allow_none=True)
 
     def validate(self) -> PipelineConfig:
         """Valida tipos, rangos y coherencia. Lanza ConfigError si algo esta mal."""
@@ -115,6 +120,15 @@ class PipelineConfig:
             errs.append(f"tile debe ser >= 32, no {self.tile}")
         if self.overlap < 0:
             errs.append(f"overlap debe ser >= 0, no {self.overlap}")
+        if self.model_imgsz is not None:
+            if self.model_imgsz < 32:
+                errs.append(f"model_imgsz debe ser >= 32, no {self.model_imgsz}")
+            elif self.model_imgsz % 32:
+                # YOLO redondea al alza al siguiente multiplo de 32; avisarlo aqui evita
+                # que la resolucion real de inferencia sea otra sin que nadie se entere.
+                errs.append(
+                    f"model_imgsz debe ser multiplo de 32, no {self.model_imgsz}"
+                )
         for name in ("assumed_spacing_m", "leaf_len_m", "pseudostem_sep_m"):
             v = getattr(self, name)
             if v <= 0:

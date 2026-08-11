@@ -79,6 +79,13 @@ def build_parser():
         default=None,
         help="Dispositivo del modelo: 'cpu', '0', 'cuda:0' (por defecto, automatico)",
     )
+    ap.add_argument(
+        "--model-imgsz",
+        type=int,
+        default=None,
+        help="Resolucion de inferencia del modelo, multiplo de 32 "
+        "(por defecto, la del tile; los modelos multi-finca se entrenaron a 768)",
+    )
     ap.add_argument("-v", "--verbose", action="count", default=0, help="Mas detalle (-v, -vv)")
     ap.add_argument("--quiet", action="store_true", help="Solo avisos y errores")
     ap.add_argument("--version", action="version", version=f"banano-drone {__version__}")
@@ -114,6 +121,8 @@ def _load_config(args) -> PipelineConfig:
         cfg.model_augment = True
     if args.device is not None:
         cfg.model_device = args.device
+    if args.model_imgsz is not None:
+        cfg.model_imgsz = args.model_imgsz
     return cfg.validate()
 
 

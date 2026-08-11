@@ -105,6 +105,45 @@ class _StubModel:
         }
 
 
+class _SpyModel(_StubModel):
+    """Igual que el anterior, pero apunta con que imgsz se construyo."""
+
+    ultimo_imgsz: int | None = None
+
+    def __init__(self, weights, conf=0.5, imgsz=640, augment=False, device=None):
+        super().__init__(weights, conf=conf, imgsz=imgsz, augment=augment, device=device)
+        _SpyModel.ultimo_imgsz = imgsz
+
+
+def _run_con_spy(tmp_path, monkeypatch, **cfg_kwargs):
+    import banano.model
+    from banano.config import PipelineConfig
+
+    monkeypatch.setattr(banano.model, "BananaModel", _SpyModel)
+    _SpyModel.ultimo_imgsz = None
+    path, _, _ = _make_png(tmp_path, size=300, seed=12)
+    cfg = PipelineConfig(gsd_cm=3.0, overlap=64, model_weights="stub.pt", **cfg_kwargs).validate()
+    raster = Raster(path, gsd_cm=3.0)
+    process_orthomosaic(raster, config=cfg)
+    raster.close()
+    return _SpyModel.ultimo_imgsz
+
+
+def test_model_imgsz_se_deduce_del_tile(tmp_path, monkeypatch):
+    # Sin model_imgsz, la resolucion de inferencia sale del tile (comportamiento de siempre).
+    assert _run_con_spy(tmp_path, monkeypatch, tile=512) == 512
+
+
+def test_model_imgsz_topado_a_1280(tmp_path, monkeypatch):
+    # Un tile enorme no debe disparar la resolucion de inferencia.
+    assert _run_con_spy(tmp_path, monkeypatch, tile=2048) == 1280
+
+
+def test_model_imgsz_explicito_manda(tmp_path, monkeypatch):
+    # El caso que motiva la opcion: tile 1024 pero modelo entrenado a 768.
+    assert _run_con_spy(tmp_path, monkeypatch, tile=1024, model_imgsz=768) == 768
+
+
 def test_model_dedup_keeps_highest_confidence(tmp_path, monkeypatch):
     # En un duplicado (dos detecciones a <mat_eps/2), debe sobrevivir la de mayor
     # confianza, no la primera en llegar.

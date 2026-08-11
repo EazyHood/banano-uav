@@ -179,14 +179,15 @@ def process_orthomosaic(
     if config.model_weights:
         from .model import BananaModel
 
+        imgsz = config.model_imgsz if config.model_imgsz is not None else min(tile, 1280)
         model = BananaModel(
             config.model_weights,
             conf=config.model_conf,
-            imgsz=min(tile, 1280),
+            imgsz=imgsz,
             augment=config.model_augment,
             device=config.model_device,
         )
-        logger.info("Usando modelo YOLO: %s", config.model_weights)
+        logger.info("Usando modelo YOLO: %s (imgsz=%d)", config.model_weights, imgsz)
 
     coords = [(y, x) for y in _tile_starts(H, tile, step) for x in _tile_starts(W, tile, step)]
     logger.info(
