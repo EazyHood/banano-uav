@@ -19,6 +19,20 @@ def _make_png(tmp_path, size=500, seed=4):
     return p
 
 
+def test_version_coincide_con_pyproject():
+    # `banano-detect --version` imprime banano.__version__; si se queda atras del
+    # pyproject, el paquete dice una version y el programa dice otra.
+    import re
+
+    import banano
+
+    raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(raiz, "pyproject.toml"), encoding="utf-8") as fh:
+        m = re.search(r'^version\s*=\s*"([^"]+)"', fh.read(), re.M)
+    assert m, "pyproject.toml sin linea de version"
+    assert banano.__version__ == m.group(1), (banano.__version__, m.group(1))
+
+
 def test_cli_missing_file_exit1(tmp_path):
     code = main(["--input", os.path.join(str(tmp_path), "no.tif"), "--out", str(tmp_path)])
     assert code == 1
