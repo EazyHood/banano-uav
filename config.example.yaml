@@ -20,13 +20,17 @@ tile: 1024              # tamaño de tile en píxeles.
 overlap: 128            # solape entre tiles (evita cortar plantas en los bordes).
 
 # --- Modelo de deep learning (opcional) ---
-# También disponible por CLI: --weights, --model-conf, --augment.
-# Umbral de confianza recomendado SEGÚN EL MODELO (el default del paquete es 0.55,
-# calibrado para el sintético):
-#   models/banana_multifarm_v12.pt  -> modelo REAL multi-finca (recomendado), conf ~0.30
-#   models/banano_real_v1.pt        -> modelo real v1 (histórico), conf ~0.35
+# También disponible por CLI: --weights, --model-conf, --augment, --model-imgsz.
+# Modelos incluidos y umbral de confianza MEDIDO para cada uno:
+#   models/banana_multifarm_v10.pt  -> REAL multi-finca (recomendado). conf 0.10-0.25 e
+#                                      imgsz 768. Ver docs/modelo-multifinca.md: el umbral
+#                                      NO es universal (0.10 da 1.8% de error en una finca
+#                                      y 48% en otra). Calíbralo con deep/eval_count.py.
+#   models/banano_real_v1.pt        -> real v1 (histórico, dataset de Sigatoka), conf ~0.35
 #   models/banano_seg_synth_v1.pt   -> segmentación sintética de macollas, conf ~0.65
 model_weights: null     # null = pipeline clásico sin modelo.
 model_conf: 0.35        # umbral de confianza del modelo.
+model_imgsz: null       # resolución de inferencia (múltiplo de 32). null = la del tile.
+                        # Pon 768 con los modelos multi-finca: es su resolución de entreno.
 model_augment: false    # test-time augmentation: más preciso, más lento.
 model_device: null      # null = auto; 'cpu' fuerza CPU (máquinas sin GPU); '0' = GPU 0.

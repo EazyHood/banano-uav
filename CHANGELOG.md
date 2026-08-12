@@ -3,6 +3,47 @@
 Todas las novedades notables de este proyecto se documentan aquí.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [2.2.0] — 2026-08-09 / 2026-08-11
+
+El tema de esta versión es **medir de verdad**: el repo ya traía un modelo multi-finca del
+que no había ni una cifra guardada, y las que se publicaban venían de protocolos que se
+elegían a sí mismos. Ahora hay 4 protocolos, registro en disco de cada corrida y una cifra
+de conteo que nadie ha elegido mirando el resultado.
+
+### Añadido
+- **Modelo multi-finca publicado**: `models/banana_multifarm_v10.pt` (YOLO11m, 768 px,
+  ~5.100 imágenes de 5 fincas independientes). Es **exactamente** el fichero con el que se
+  midió (SHA256 `8e4b7d1f7eba3651`), no una copia re-guardada.
+  - finca original: mAP50 **0.861**, error del conteo total **1,8 %**;
+  - otras 4 fincas del entrenamiento: mAP50 **0.746**, error **8,4 %**;
+  - **finca que ningún modelo vio: mAP50 0.172, recall 0.139** — la cifra que de verdad
+    predice lo que pasa en una finca nueva, y por eso va en el README.
+- **`docs/modelo-multifinca.md`**: los 4 protocolos, las dos tablas, la calibración del
+  umbral y por qué el modelo v12 **no** se publica (medido: pierde en las dos únicas
+  pruebas honestas; sus victorias están en fincas que lleva en el entrenamiento).
+- **`deep/eval_v12_suite.py`**: los 4 protocolos de una tacada, mAP + conteo, con
+  comparación contra los baselines ya registrados.
+- **`model_imgsz`** (YAML y `--model-imgsz`): fija la resolución de inferencia. Antes el
+  pipeline infería a la resolución del tile (1024 por defecto) mientras los modelos
+  multi-finca están entrenados a 768, y no había forma de casarlo sin tocar código.
+- Prueba que compara `banano.__version__` con la versión de `pyproject.toml`.
+
+### Cambiado
+- **Error de conteo honesto**: `deep/eval_count.py` elegía el mejor umbral de confianza
+  mirando el mismo conjunto sobre el que después reportaba el error. Ahora calibra en un
+  pliegue y mide en el otro (partiendo cada finca por bloques, no alternando tiles
+  vecinos). El JSON conserva la cifra in-sample, pero etiquetada como tal.
+- Los registros de conteo guardan los **conteos por umbral y por imagen**: recalibrar
+  después ya no cuesta otra pasada de GPU.
+- `config.example.yaml` documenta el umbral como un **rango medido** (0,10-0,25) en vez de
+  una cifra única: con este modelo, 0,10 da 1,8 % de error en una finca y 48 % en otra.
+
+### Corregido
+- `config.example.yaml` y el README anunciaban `models/banana_multifarm_v12.pt`, un fichero
+  que **no existía en el repo**.
+- `banano/__init__.py` se había quedado en 2.1.0 mientras `pyproject.toml` declaraba 2.2.0:
+  `banano-detect --version` imprimía una versión distinta a la del paquete.
+
 ## [2.1.0] — 2026-07-03 / 2026-07-04
 
 Sube la precisión por encima del 98 % de acierto en las tres métricas (sobre sintético)

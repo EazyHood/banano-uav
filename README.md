@@ -162,19 +162,41 @@ dosel cerrado) cuando la fiabilidad baja.
 
 ## 🎯 Modelo entrenado con imágenes REALES (listo para usar)
 
-Incluye **`models/banano_real_v1.pt`** — un detector YOLOv8 **entrenado sobre ~14 000 tiles
-de imágenes UAV REALES de banano** (dataset abierto AI-BananaMapping, [Zenodo](https://zenodo.org/records/20945958),
-CC-BY-4.0). Una empresa lo usa directamente sobre sus ortofotos, **sin entrenar nada**:
+Incluye **`models/banana_multifarm_v10.pt`** — un detector YOLO11m entrenado sobre ~5.100
+imágenes UAV de **5 fincas independientes** de banano/plátano. Se usa directamente sobre tus
+ortofotos, **sin entrenar nada**:
 
 ```bash
 pip install -e .[deep]
-banano-detect --input tu_ortofoto.tif --config config.example.yaml --out resultados
-# en el YAML:  model_weights: models/banano_real_v1.pt
+banano-detect --input tu_ortofoto.tif --gsd 3.0 \
+    --weights models/banana_multifarm_v10.pt --model-conf 0.10 --model-imgsz 768 \
+    --out resultados
 ```
 
-**Rendimiento sobre imágenes reales** (4 611 tiles de test nunca vistos): **mAP50 0.411**,
-precisión 0.47, recall 0.46. Son cifras honestas de campo (el banano real es más difícil que
-el sintético). Detalle y alcance: [`docs/modelo-real.md`](docs/modelo-real.md).
+**Medido en 4 protocolos, del más fácil al más honesto** (mismo modelo, imgsz 768):
+
+| protocolo | mAP50 | error del conteo total | error medio por imagen |
+|---|---|---|---|
+| finca original (test retenido) | 0.861 | **1,8 %** | 0,16 |
+| otras 4 fincas del entrenamiento (test retenido) | 0.746 | 8,4 % | 0,57 |
+| **finca nueva que ningún modelo vio** | **0.172** | 77,6 % | 0,63 |
+
+> ⚠️ **Lo importante es la última fila.** En las fincas que conoce funciona; en una finca
+> nueva de verdad encuentra **~14 de cada 100 plantas**. Si tu finca no se parece a las del
+> entrenamiento, etiqueta 100-200 tiles tuyos y afínalo: es la diferencia entre 0.17 y 0.75
+> de mAP50. Y el umbral de confianza **no es universal** — hay que calibrarlo con tus
+> imágenes (`deep/eval_count.py` lo hace en una pasada).
+
+El error del conteo *total* compensa sobre- y sub-conteos entre imágenes, así que va siempre
+acompañado del error **por imagen**. Todo el detalle, la calibración cruzada con la que se
+eligieron los umbrales y por qué el modelo v12 se midió pero **no** se publica:
+[`docs/modelo-multifinca.md`](docs/modelo-multifinca.md).
+
+También se conserva **`models/banano_real_v1.pt`** (histórico): YOLOv8 sobre ~14 000 tiles del
+dataset AI-BananaMapping ([Zenodo](https://zenodo.org/records/20945958), CC-BY-4.0), **mAP50
+0.411** en su propio test. Está entrenado contra un objetivo distinto (Sigatoka: planta
+enferma, no toda planta), así que sus cifras no son comparables con la tabla de arriba.
+Detalle: [`docs/modelo-real.md`](docs/modelo-real.md).
 
 ## Entrenar tu propio modelo (opcional)
 
@@ -214,14 +236,15 @@ python deep/benchmark.py --n 20 --size 1024 --weights models/banano_seg_synth_v1
 banano/          indices · segment · grid · radial · centers · mats · pipeline
                  geo (GeoTIFF) · ortho (tiles+dedup) · report (CSV/GeoJSON/HTML) · cli
                  config · errors · logconf · model (YOLO det/seg)
-models/          pesos entrenados (banana_multifarm_v12.pt · banano_real_v1.pt ·
+models/          pesos entrenados (banana_multifarm_v10.pt · banano_real_v1.pt ·
                  banano_seg_synth_v1.pt)
 scripts/         demo.py · run.py · make_example.py
 deep/            make_synth_dataset · train_yolo · infer_yolo · benchmark
-                 train_v12 · eval_record · eval_count (evaluación registrada)
-real_eval/       registros JSON de cada evaluación (fecha, pesos, datos, métricas)
+                 train_v12 · eval_record · eval_count · eval_v12_suite (los 4 protocolos)
+real_eval/       registros JSON de cada evaluación (fecha, pesos, SHA, datos, métricas)
 docs/            guía de campo · API · estado del arte · datos reales · modelo real
-tests/           pruebas (pytest, 54, cobertura 83-87% según extras)
+                 modelo multi-finca (los 4 protocolos y su honestidad)
+tests/           pruebas (pytest, 72, cobertura 83-87% según extras)
 Dockerfile · pyproject.toml · config.example.yaml · .github/workflows/ci.yml
 ```
 
