@@ -178,14 +178,31 @@ banano-detect --input tu_ortofoto.tif --gsd 3.0 \
 | protocolo | mAP50 | error del conteo total | error medio por imagen |
 |---|---|---|---|
 | finca original (test retenido) | 0.861 | **1,8 %** | 0,16 |
-| otras 4 fincas del entrenamiento (test retenido) | 0.746 | 8,4 % | 0,57 |
+| otras 4 fincas del entrenamiento (test retenido) | 0.746 ⚠️ | 8,4 % | 0,57 |
 | **finca nueva que ningún modelo vio** | **0.172** | 77,6 % | 0,63 |
+
+> ⚠️ **La segunda fila está contaminada** (medido el 2026-08-23 con
+> [`deep/leak_audit.py`](deep/leak_audit.py)). Ese protocolo valida en parte con
+> `extra/prueba2rgb`, que resultó ser **byte a byte el mismo dataset** que
+> `extra/etiquetasnuevas`, presente en el entrenamiento: las 505 imágenes coinciden por MD5,
+> subidas a dos workspaces distintos de Roboflow con nombres re-hasheados, así que el dedup
+> por nombre no podía verlas. Son **25 de las 99 imágenes** del protocolo (25 %) las que el
+> modelo ya había visto, así que 0.746 está por encima de lo real. Los otros tres protocolos
+> dan **0 % de fuga** y se sostienen enteros. Se vuelve a medir sin la fuente duplicada en la
+> próxima tanda de entrenamiento.
 
 > ⚠️ **Lo importante es la última fila.** En las fincas que conoce funciona; en una finca
 > nueva de verdad encuentra **~14 de cada 100 plantas**. Si tu finca no se parece a las del
-> entrenamiento, etiqueta 100-200 tiles tuyos y afínalo: es la diferencia entre 0.17 y 0.75
-> de mAP50. Y el umbral de confianza **no es universal** — hay que calibrarlo con tus
-> imágenes (`deep/eval_count.py` lo hace en una pasada).
+> entrenamiento, etiqueta 100-200 tiles tuyos y afínalo. Y el umbral de confianza **no es
+> universal** — hay que calibrarlo con tus imágenes (`deep/eval_count.py` lo hace en una pasada).
+
+> 🔍 **Por qué falla en finca nueva: es, en primer lugar, un problema de escala.**
+> [`deep/scale_audit.py`](deep/scale_audit.py) mide que a imgsz 768 la planta mediana ocupa
+> **10 px en una finca y 333 px en otra** (35×), y que el **81 % de las cajas** con las que se
+> entrenó v10 son plantas de **16-21 px**. La finca nueva las tiene de 45 px, en una banda que
+> apenas aparece en el entrenamiento (menos del 1 % de las cajas entre 21 y 46 px). Eso explica
+> el recall de 0,139 mejor que "otro suelo, otra luz", y explica que v12 —entrenado con más
+> fincas— *empeorase* ahí: añadió masa en los extremos (10 px y 333 px), no donde esa finca vive.
 
 El error del conteo *total* compensa sobre- y sub-conteos entre imágenes, así que va siempre
 acompañado del error **por imagen**. Todo el detalle, la calibración cruzada con la que se

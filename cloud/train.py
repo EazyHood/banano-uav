@@ -10,27 +10,26 @@ datos salen de splits/ (generados por cloud/make_splits.py, con rutas relativas)
 
 RECETAS
 -------
-`base`   reproduce la receta de v10/v12 tal cual, para tener control con el que comparar.
-`escala` ataca lo que midió deep/scale_audit.py: entre las fincas hay 35x de diferencia
-         de tamaño de planta y el 81% del entrenamiento son plantas de 16-21 px, así que
-         una finca nueva con plantas de otro tamaño cae fuera de lo aprendido.
-         `scale=0.6` sólo cubre 0.4x-1.6x (4x). Esta receta sube `scale` y activa
-         `multi_scale`, que varía la resolución de entrada entre lotes: juntos cubren un
-         rango mucho más ancho. Además sube el jitter de color, porque el cambio de finca
-         trae también cambio de suelo y de luz.
+`v10`     lo que de verdad entrenó al modelo publicado (leído de runs10/.../args.yaml):
+          los defaults de YOLO, sin rotación ni volteo. Es el control honesto.
+`cenital` la de v12: rotación libre y volteo vertical, que la vista nadir permite.
+`escala`  cenital + el arreglo de lo que se midió: entre fincas hay 11x de diferencia en
+          el tamaño de la planta (mediana de 15,6 px a 175,3 px a imgsz 768), y ningún
+          `scale` escalar cubre eso. Usa `scale` como tupla absoluta (0.25, 2.5) y
+          `multi_scale`.
 
-Ninguna de las dos es "la buena" por decreto: se entrenan y se comparan con el mismo
-protocolo LOFO. Si `escala` no gana en las fincas retenidas, no se publica.
+Ninguna es "la buena" por decreto: se entrenan y se comparan con el mismo protocolo
+LOFO. Si `escala` no gana en las fincas retenidas, no se publica.
 
 CORTES DE SESIÓN
 ----------------
 Las GPU gratuitas se cortan. El script reanuda solo: si encuentra `last.pt` de una
-tirada con el mismo nombre, continúa desde ahí en vez de empezar de cero. Por eso
-importa que el proyecto apunte a almacenamiento que sobreviva a la sesión.
+tirada con el mismo nombre, continúa desde ahí en vez de empezar de cero. En Kaggle eso
+significa apuntar --proyecto a /kaggle/working, que es lo que se autoguarda.
 
 Uso:
     python cloud/train.py --data splits/todas_las_fincas.yaml --receta escala
-    python cloud/train.py --data splits/lofo_armah.yaml --receta base --epochs 60
+    python cloud/train.py --data splits/lofo_armah.yaml --receta v10 --epochs 60
     python cloud/train.py --lofo --receta escala      # entrena una vez por finca retenida
 """
 
@@ -51,21 +50,40 @@ os.environ.setdefault("WANDB_DISABLED", "true")  # si no, pide login y cuelga un
 ROOT = Path(__file__).resolve().parents[1]
 
 RECETAS: dict[str, dict[str, Any]] = {
-    "base": {
-        "_nota": "receta de v10/v12 tal cual: el control con el que comparar.",
+    "v10": {
+        "_nota": (
+            "lo que de verdad entrenó al modelo publicado, leído de runs10/.../args.yaml: "
+            "degrees 0, flipud 0, scale 0.5. Es decir, los defaults de YOLO. La "
+            "'augmentation cenital' que describe el docstring de deep/train_v12.py se aplicó "
+            "sólo a v12, que se decidió no publicar. El modelo que la gente descarga nunca "
+            "vio una planta rotada ni volteada. Este es el control honesto."
+        ),
+        "degrees": 0.0,
+        "flipud": 0.0,
+        "scale": 0.5,
+    },
+    "cenital": {
+        "_nota": (
+            "la receta de v12: aprovecha que la vista nadir es invariante a rotación y a "
+            "volteo vertical, cosa que los defaults de YOLO no explotan."
+        ),
         "degrees": 180.0,
         "flipud": 0.5,
         "scale": 0.6,
     },
     "escala": {
         "_nota": (
-            "contra los 35x de diferencia de tamaño entre fincas. scale 0.9 cubre 0.1x-1.9x "
-            "y multi_scale mueve además la resolución de entrada entre lotes; el jitter de "
-            "color acompaña porque cambiar de finca cambia suelo y luz."
+            "cenital + el arreglo del problema medido: entre fincas hay 11x de diferencia en "
+            "el tamaño de la planta (mediana de 15,6 px a 175,3 px a imgsz 768). `scale` "
+            "admite TUPLA (min,max) como factores absolutos —augment.py:1085-1134—, así que "
+            "(0.25, 2.5) cubre 10x, justo la dispersión real. `scale` como float sólo daba "
+            "0.4x-1.6x. multi_scale mueve además la resolución de entrada entre lotes. "
+            "NO se usa copy_paste: en ultralytics 8.4.117 es exclusivo de segmentación "
+            "(default.yaml:131) y aquí las etiquetas son cajas, así que no haría nada."
         ),
         "degrees": 180.0,
         "flipud": 0.5,
-        "scale": 0.9,
+        "scale": (0.25, 2.5),
         "multi_scale": True,
         "hsv_h": 0.02,
         "hsv_s": 0.8,
@@ -74,6 +92,11 @@ RECETAS: dict[str, dict[str, Any]] = {
         "close_mosaic": 10,
     },
 }
+
+# El default de ultralytics es 300 (cfg/default.yaml:57) y en el holdout hay una imagen
+# con 600 plantas reales: ahí el recall estaba topado al 50% por construcción, no por el
+# modelo. Las fincas densas llegan a 328 cajas por imagen.
+MAX_DET = 1000
 
 
 def entorno() -> dict[str, Any]:
@@ -151,7 +174,10 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
         **hiper,
     )
 
-    metricas = modelo.val(data=str(data), imgsz=args.imgsz, device=device, verbose=False, plots=False)
+    metricas = modelo.val(
+        data=str(data), imgsz=args.imgsz, device=device,
+        max_det=args.max_det, verbose=False, plots=False,
+    )
     resultado = {
         "data": data.name,
         "receta": args.receta,
@@ -162,6 +188,7 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
         "batch": batch,
         "workers": workers,
         "device": device,
+        "max_det": args.max_det,
         "entorno": info,
         "minutos": round((time.time() - t0) / 60, 1),
         "pesos": str(Path(proyecto) / nombre / "weights" / "best.pt"),
@@ -184,6 +211,7 @@ def main() -> int:
     ap.add_argument("--data", type=Path, default=ROOT / "splits" / "todas_las_fincas.yaml")
     ap.add_argument("--lofo", action="store_true", help="una tirada por cada splits/lofo_*.yaml")
     ap.add_argument("--receta", choices=sorted(RECETAS), default="escala")
+    ap.add_argument("--max-det", type=int, default=MAX_DET, help="tope de detecciones por imagen")
     ap.add_argument("--modelo", default="yolo11m.pt")
     ap.add_argument("--imgsz", type=int, default=768)
     ap.add_argument("--epochs", type=int, default=80)

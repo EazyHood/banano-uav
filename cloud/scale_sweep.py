@@ -16,24 +16,40 @@ rendimiento tiene que subir de forma clara. Si el problema es de DOMINIO visual
 (otro suelo, otra luz, otra variedad, palma aceitera de fondo), el barrido saldrá
 plano y habrá que atacarlo por otra vía.
 
-PREDICCIÓN, ESCRITA ANTES DE MIRAR EL RESULTADO (2026-08-23)
-------------------------------------------------------------
-armah tiene imágenes de 1049x626 y plantas de ~61 px reales. A imgsz X la planta
-aparente mide 61 * X/1049 px. El entrenamiento de v10 tiene dos modos:
+LA PREDICCIÓN Y EL RESULTADO (2026-08-23) — se deja escrita porque falló a medias
+---------------------------------------------------------------------------------
+Antes de medir se predijo: "si manda la escala, el mejor imgsz para armah cae lejos
+de 768, hacia 300-450, porque el 81% del entrenamiento son plantas de 16-21 px y a
+imgsz ~292 las de armah se verían de ese tamaño".
 
-    modo dominante  ~17 px (81% de las cajas)  ->  X = 17 * 1049/61 =~ 292
-    modo grande    ~169 px (6% de las cajas)   ->  X = 169 * 1049/61 =~ 2906
+Medido sobre armah con los pesos v10 sin tocar (el valor a 768 reprodujo el fichero
+real_eval, 0.1724 frente a 0.1723, así que el instrumento está validado):
 
-Predigo que, SI manda la escala, la curva NO será plana y tendrá su mejor punto
-lejos de 768 — con un máximo hacia la izquierda (~300-450), porque ahí es donde
-está la masa del entrenamiento. Si en cambio el mejor punto es 768 o la curva se
-mueve menos de un 20% relativo, la hipótesis de escala queda refutada y el problema
-es de dominio.
+    imgsz  320 -> mAP50 0.0001   R 0.0160
+    imgsz  512 -> mAP50 0.0146   R 0.0334
+    imgsz  640 -> mAP50 0.0848   R 0.0922
+    imgsz  768 -> mAP50 0.1724   R 0.1386   <- el que usa el repo hoy
+    imgsz  896 -> mAP50 0.2573   R 0.2068
+    imgsz 1024 -> mAP50 0.2847   R 0.2290   <- óptimo, +65% de mAP y +65% de recall
+    imgsz 1152 -> mAP50 0.2708   R 0.2195
+    imgsz 1280 -> mAP50 0.2694   R 0.2152
+    imgsz 1536 -> mAP50 0.2470   R 0.1949
 
-Anoto también el riesgo: a imgsz muy pequeño el mAP puede subir por una razón
-tramposa — menos detecciones, menos falsos positivos. Por eso se registra el RECALL
-junto al mAP: el síntoma real de armah es recall 0.139, así que una mejora que no
-suba el recall no vale.
+La mitad acertada: la curva NO es plana, la escala manda, y el punto que usa el repo
+no es el bueno. Máximo interior con campana a los dos lados, no un artefacto de borde.
+La mitad equivocada, y conviene entender por qué: el óptimo está ARRIBA (1024), no
+abajo. Igualar el tamaño *relativo* al del entrenamiento no basta, porque encoger la
+imagen destruye los píxeles de textura con los que se reconoce una roseta. A 320 px
+la planta tiene el tamaño "correcto" y aun así el mAP es 0.0001. El detector necesita
+resolución absoluta, no sólo proporción.
+
+Sube el recall a la vez que el mAP (0.1386 -> 0.2290), así que no es la mejora
+tramposa de "detectar menos y fallar menos".
+
+AVISO DE MÉTODO: ese 1024 se eligió mirando armah, que es el holdout. Afinar un
+hiperparámetro sobre el conjunto con el que luego presumes es exactamente el error
+que este repo ya corrigió una vez en eval_count.py. Por eso existe --todas-las-fincas:
+el imgsz que se publique debe salir del promedio LOFO, no de armah sola.
 
 Uso:
     python cloud/scale_sweep.py --pesos models/banana_multifarm_v10.pt --data splits/lofo_armah.yaml
@@ -52,8 +68,9 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Cubre desde "la planta se ve como en agromatica" hasta "como en count_banana_plants".
-IMGSZ_POR_DEFECTO = [320, 448, 576, 768, 960, 1280, 1600, 1920]
+# Por debajo de 512 el mAP se hunde a ~0 en todas las fincas medidas: no aporta puntos
+# a la curva y cuesta una pasada de validacion cada uno. Se barre de 640 en adelante.
+IMGSZ_POR_DEFECTO = [640, 768, 896, 1024, 1152, 1280, 1536, 1920]
 
 
 def dispositivo() -> str:
@@ -67,7 +84,7 @@ def dispositivo() -> str:
     return "cpu"
 
 
-def barre(pesos: Path, data: Path, tamanos: list[int], device: str, conf: float) -> list[dict[str, Any]]:
+def barre(pesos: Path, data: Path, tamanos: list[int], device: str, conf: float, max_det: int) -> list[dict[str, Any]]:
     from ultralytics import YOLO
 
     filas: list[dict[str, Any]] = []
@@ -82,6 +99,7 @@ def barre(pesos: Path, data: Path, tamanos: list[int], device: str, conf: float)
                 imgsz=imgsz,
                 device=device,
                 conf=conf,
+                max_det=max_det,
                 verbose=False,
                 plots=False,
                 save_json=False,
@@ -112,6 +130,8 @@ def main() -> int:
     ap.add_argument("--todas-las-fincas", action="store_true", help="barre cada splits/lofo_*.yaml")
     ap.add_argument("--imgsz", type=int, nargs="*", default=IMGSZ_POR_DEFECTO)
     ap.add_argument("--conf", type=float, default=0.001, help="umbral bajo: para mAP se quiere la curva entera")
+    ap.add_argument("--max-det", type=int, default=1000,
+                    help="el default de ultralytics es 300 y hay imagenes con 600 plantas")
     ap.add_argument("--device", default=None)
     ap.add_argument("--salida", type=Path, default=ROOT / "real_eval" / "scale_sweep.json")
     args = ap.parse_args()
@@ -134,17 +154,17 @@ def main() -> int:
         "pesos": str(args.pesos.name),
         "device": device,
         "conf": args.conf,
-        "prediccion_previa": (
-            "Si manda la escala, el mejor imgsz para armah cae lejos de 768, hacia 300-450, "
-            "porque el 81% del entrenamiento son plantas de 16-21 px. Si la curva es plana "
-            "(menos del 20% de variación relativa) o el máximo es 768, la hipótesis se refuta."
+        "max_det": args.max_det,
+        "nota_metodo": (
+            "El imgsz que se publique debe salir del promedio LOFO, no de una sola finca: "
+            "elegirlo mirando armah es afinar sobre el holdout."
         ),
         "fincas": {},
     }
 
     for d in datas:
         print(f"\n=== {d.stem} ===")
-        filas = barre(args.pesos, d, args.imgsz, device, args.conf)
+        filas = barre(args.pesos, d, args.imgsz, device, args.conf, args.max_det)
         if not filas:
             continue
         mejor = max(filas, key=lambda f: f["mAP50"])

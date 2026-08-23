@@ -52,6 +52,10 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# El notebook de Kaggle es un ARTEFACTO: lo genera kaggle/build_notebook.py y se sube tal
+# cual a la nube. Si ruff lo reformatea, deja de coincidir con su generador y la siguiente
+# regeneracion revierte el arreglo. Se lintea el generador, que es la fuente.
+extend-exclude = ["*.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM"]

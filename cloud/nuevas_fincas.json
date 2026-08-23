@@ -1,0 +1,127 @@
+{
+  "nota": "Fincas de banano/plátano NUEVAS y análogos de preentreno, encontrados y verificados el 2026-08-23. Ninguna está en realdata/ todavía. Cada descarga se comprobó de verdad (HTTP 200 + tamaño real) y cada candidata se cruzó con el corpus local por hash perceptual para descartar que fuese un fork de count_banana_plants, que es como se colaron los falsos positivos del inventario de julio. Se descargan EN LA NUBE con cloud/fetch_data.py --nuevas; el PC del autor no sube nada.",
+  "fecha": "2026-08-23",
+  "por_que_importan": "El entrenamiento actual tiene 3 fuentes realmente independientes, no 5: los tres proyectos de agromatica2025 son un mismo operador a tres altitudes, y prueba2rgb es una copia byte a byte de etiquetasnuevas. Con tan pocos orígenes, el modelo aprende el aspecto de esas fincas, no el de una planta de banano. Estas añaden paisajes que el corpus no tiene: minifundio con casas y bosque, dosel adulto denso, vivero con fundas azules.",
+  "fuentes": [
+    {
+      "carpeta": "nuevas/banavista",
+      "workspace": "banavista",
+      "proyecto": "banana-detection-4hbck",
+      "version": 3,
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 364,
+      "cajas": 55206,
+      "rol": "finca nueva — dosel adulto denso en bloques de siembra",
+      "descarga_verificada_bytes": 278000000,
+      "notas": "Originales DJI a 4000x3000, no recortes: se pueden retejar a la escala que convenga. 152 cajas por imagen. La clase 'Others' (950 cajas) hay que descartarla o remapearla."
+    },
+    {
+      "carpeta": "nuevas/minifundio",
+      "workspace": "parasite-2gktv",
+      "proyecto": "banana3-fynsc",
+      "version": 1,
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 157,
+      "cajas": 51447,
+      "rol": "finca nueva — LA MÁS PARECIDA A ARMAH, que es donde el modelo falla",
+      "descarga_verificada_bytes": null,
+      "notas": "Banano nadir mezclado con casas de zinc, palmas de coco, bosque y parcelas irregulares: paisaje de pequeño productor. Es exactamente el tipo de escena de armah (Ghana) y justo lo que NO hay en el entrenamiento actual, todo plantación comercial en hileras. 328 cajas/img a 640x640. Actualizado 2026-02-28, posterior al inventario de julio."
+    },
+    {
+      "carpeta": "nuevas/buvan",
+      "workspace": "buvan-wfyjx",
+      "proyecto": "banana_count_45-djrwv",
+      "version": 1,
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 7852,
+      "cajas": 588241,
+      "rol": "finca nueva — vivero con fundas azules + dosel adulto sobre suelo rojo",
+      "descarga_verificada_bytes": null,
+      "notas": "OJO: entre sus clases figura literalmente 'Count banana plants - v38 2024-10-18 2:31pm', que parece un fork. NO lo es: esa clase tiene 0 anotaciones (esquema heredado al clonar) y las imágenes dieron 0 de 24 duplicados perceptuales contra el corpus local. Está augmentado (7.852 de 7.863); conviene deduplicar por stem antes de usar."
+    },
+    {
+      "carpeta": "nuevas/macollas",
+      "workspace": "bananas-g4siz",
+      "proyecto": "banana_set2",
+      "version": 8,
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 237,
+      "cajas": 18038,
+      "rol": "finca nueva — macollas adultas solapadas, el caso difícil del proyecto",
+      "descarga_verificada_bytes": 21848254,
+      "notas": "El ejemplo más puro de lo que el modelo no sabe leer: macollas adultas solapadas con fundas azules de racimo, sin borde claro entre individuos. Sólo 21 MB. La v8 son 237 imágenes sin augmentar (hay una v6 con 22.123 augmentadas que NO conviene)."
+    },
+    {
+      "carpeta": "nuevas/suelo_rojo",
+      "workspace": "astarothdc",
+      "proyecto": "detection_plants",
+      "version": 2,
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 181,
+      "cajas": 1888,
+      "rol": "finca nueva — plantación joven en hileras sobre suelo rojo desnudo",
+      "descarga_verificada_bytes": 51335144,
+      "notas": "Dominio parecido a elliot pero de otra finca: riego por líneas y estacas. Algunas originales a 5280x3956."
+    },
+    {
+      "carpeta": "nuevas/qpl6j",
+      "workspace": "jorges-workspace-4uit3",
+      "proyecto": "banano-qpl6j",
+      "version": 1,
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 71,
+      "cajas": 5078,
+      "rol": "finca nueva — banano adulto sobre suelo húmedo",
+      "descarga_verificada_bytes": 11964208,
+      "notas": "Creado 2026-06-19. Pequeña pero limpia. Aviso del cazador: cerca del 50% de alguna tesela sale negra; revisar antes de meterla."
+    }
+  ],
+  "preentreno_analogo": [
+    {
+      "carpeta": "preentreno/pina",
+      "workspace": "plants-rcgzz",
+      "proyecto": "pineapple-week-5",
+      "version": 1,
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 237,
+      "cajas": 61041,
+      "rol": "preentreno: la piña es el análogo geométrico más fiel a una macolla",
+      "descarga_verificada_bytes": 22580333,
+      "notas": "Una piña vista desde arriba ES una roseta, plantada tan densa que las hojas de plantas vecinas se cruzan: el mismo '¿dónde acaba una y empieza la otra?' del banano, con más densidad todavía (257 cajas por imagen). 22 MB: el preentreno más barato de la lista."
+    },
+    {
+      "carpeta": "preentreno/palma",
+      "workspace": "gis-40htp",
+      "proyecto": "palm-detection",
+      "version": 3,
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 24985,
+      "cajas": 2034780,
+      "rol": "preentreno: dos millones de coronas radiales en nadir",
+      "descarga_verificada_bytes": 4094615636,
+      "notas": "4,1 GB. Palma aceitera cenital, joven y adulta, con solape de coronas. Enseña 'corona radial vista desde arriba' antes de afinar en banano. Creado 2026-03-13, no existía en el inventario de julio. Cabe en el disco de Kaggle pero se come tiempo de descarga: usarlo sólo si el preentreno barato con piña muestra que la vía funciona."
+    }
+  ],
+  "descartados_con_prueba": [
+    {
+      "que": "Neupane 2019 (Figshare 7981547), 846 imgs a 40/50/60 m",
+      "por_que": "Sigue EMBARGADO y sin fecha de vencimiento. La API devuelve is_embargoed=True, embargo_date=None y la lista de ficheros vacía. No se va a desbloquear solo; sólo escribiendo al autor. Comprobado contra la API el 2026-08-23, no contra la web."
+    },
+    {
+      "que": "etiquetado-tallos/deteccion-s28nu",
+      "por_que": "Es una re-subida del mismo vuelo que extra/etiquetasnuevas, que ya está en disco. 13 de 24 imágenes con distancia perceptual 0-1, y dos confirmadas píxel a píxel."
+    },
+    {
+      "que": "Cluster 'Tesis' de Roboflow (rgb_data1, rgb_multi_data6, prueba2_rgb359, tesis-pzysi; ~1.960 imgs)",
+      "por_que": "Mismo workspace del que ya salió etiquetasnuevas. Tratarlos como la misma finca."
+    },
+    {
+      "que": "realdata/DS-v1 y DS-v2 (21 GB ya en disco)",
+      "por_que": "No son reciclables como datos de conteo: son teselas tomadas a pocos metros donde UNA SOLA HOJA llena el encuadre, con cajas de 0,07-0,14 normalizado que rodean lesiones, no plantas. La idea de colapsar las clases de Sigatoka para sacar etiquetas de conteo gratis se comprobó y es falsa."
+    },
+    {
+      "que": "coffeeitcrsav/coffee_data_raw y datamerging-4nt3v/lstudio-morning-sunny",
+      "por_que": "Licencia BY-NC-SA 4.0. No comercial + ShareAlike no se mezcla limpio en un repo AGPL-3.0 que se publica como producto."
+    }
+  ]
+}

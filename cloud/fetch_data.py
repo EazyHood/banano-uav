@@ -37,6 +37,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFIESTO = ROOT / "cloud" / "data_manifest.json"
+NUEVAS = ROOT / "cloud" / "nuevas_fincas.json"
 
 API = "https://api.roboflow.com/{workspace}/{proyecto}/{version}/yolov8?api_key={key}"
 REINTENTOS = 3
@@ -149,11 +150,28 @@ def main() -> int:
     ap.add_argument("--solo", nargs="*", help="carpetas concretas del manifiesto")
     ap.add_argument("--incluir-sin-usar", action="store_true", help="también las descargadas y nunca usadas")
     ap.add_argument("--incluir-descartados", action="store_true", help="también karachi y conteo")
+    ap.add_argument("--nuevas", action="store_true", help="las 6 fincas nuevas de cloud/nuevas_fincas.json")
+    ap.add_argument("--preentreno", action="store_true", help="los análogos de preentreno (piña, palma)")
     ap.add_argument("--forzar", action="store_true", help="re-descargar aunque exista")
     args = ap.parse_args()
 
     manifiesto = json.loads(args.manifiesto.read_text(encoding="utf-8"))
     fuentes: list[dict[str, Any]] = manifiesto["fuentes"]
+
+    if args.nuevas or args.preentreno:
+        # Fincas que aún no están en realdata/: se descargan directamente en la máquina
+        # remota. Van en fichero aparte porque build_manifest.py regenera el otro leyendo
+        # el disco, y estas todavía no tienen disco que leer.
+        nuevas = json.loads(NUEVAS.read_text(encoding="utf-8"))
+        extra: list[dict[str, Any]] = []
+        if args.nuevas:
+            extra += nuevas["fuentes"]
+        if args.preentreno:
+            extra += nuevas["preentreno_analogo"]
+        if args.solo:
+            fuentes = fuentes + extra
+        else:
+            fuentes = extra
 
     if args.solo:
         pedidas = set(args.solo)
