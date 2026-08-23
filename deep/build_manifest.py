@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -34,6 +35,9 @@ RE_URL = re.compile(r"https://universe\.roboflow\.com/([\w\-.]+)/([\w\-.]+)")
 RE_LIC = re.compile(r"^License:\s*(.+)$", re.MULTILINE)
 RE_VER = re.compile(r"\s-\sv(\d+)\b")
 RE_IMGS = re.compile(r"includes ([\d,]+) images")
+# Roboflow renombra cada exportacion: <original>_jpg.rf.<hash>.jpg. Varias copias con el
+# mismo <original> son augmentaciones del mismo disparo, no fotos distintas.
+RE_ROBOFLOW = re.compile(r"(.+?)(_jpe?g|_JPE?G|_png|_PNG)?\.rf\.[0-9a-f]+\.\w+$")
 
 # Rol de cada carpeta en los protocolos del repo. Se mantiene a mano a propósito: es
 # una decisión de método (qué finca es holdout ciego), no un dato del disco.
@@ -55,6 +59,24 @@ ROLES: dict[str, str] = {
     "newfarms/karachi": "descartado: cultivo sin confirmar",
     "newfarms/conteo": "descartado: sub-etiquetado",
 }
+
+
+def mide_disco(carpeta: Path) -> tuple[int, int]:
+    """(imagenes en disco, disparos originales distintos).
+
+    La diferencia importa mas de lo que parece: extra/plantas_jovenes_80m1 tiene 2.159
+    imagenes pero solo 407 originales, asi que el modelo vio cinco copias augmentadas de
+    cada foto. Contar imagenes sobreestima la diversidad real del entrenamiento.
+    """
+    vistos: dict[str, Path] = {}
+    for p in carpeta.rglob("*"):
+        if p.suffix.lower() in {".jpg", ".jpeg", ".png"}:
+            vistos.setdefault(os.path.normcase(str(p)), p)
+    originales = set()
+    for f in vistos.values():
+        m = RE_ROBOFLOW.match(f.name)
+        originales.add(m.group(1) if m else f.name)
+    return len(vistos), len(originales)
 
 
 def lee_fuente(carpeta: Path, raiz: Path) -> dict[str, Any] | None:
@@ -86,6 +108,7 @@ def lee_fuente(carpeta: Path, raiz: Path) -> dict[str, Any] | None:
             imgs = int(mi.group(1).replace(",", ""))
 
     rel = carpeta.relative_to(raiz).as_posix()
+    en_disco, originales = mide_disco(carpeta)
     return {
         "carpeta": rel,
         "workspace": workspace,
@@ -94,6 +117,12 @@ def lee_fuente(carpeta: Path, raiz: Path) -> dict[str, Any] | None:
         "url": f"https://universe.roboflow.com/{workspace}/{proyecto}",
         "licencia": lic.group(1).strip() if lic else "NO DECLARADA",
         "imgs_exportadas": imgs,
+        "imgs_en_disco": en_disco,
+        "disparos_originales": originales,
+        # Si en disco hay una imagen por original, es que en su dia se quitaron las copias
+        # augmentadas; cloud/fetch_data.py tiene que repetirlo para reconstruir el MISMO
+        # dataset. Si se conservaron, se conservan tambien en la nube.
+        "dedup_aplicado": en_disco == originales,
         "rol": ROLES.get(rel, "sin clasificar"),
     }
 

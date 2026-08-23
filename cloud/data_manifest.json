@@ -14,6 +14,9 @@
       "url": "https://universe.roboflow.com/count-banana-plants/count-banana-plants",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 702,
+      "imgs_en_disco": 702,
+      "disparos_originales": 451,
+      "dedup_aplicado": false,
       "rol": "train+val (finca original)"
     },
     {
@@ -24,6 +27,9 @@
       "url": "https://universe.roboflow.com/project-c5yqs/banana_counting",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 2346,
+      "imgs_en_disco": 2344,
+      "disparos_originales": 450,
+      "dedup_aplicado": false,
       "rol": "descargado, SIN USAR en ningún entrenamiento"
     },
     {
@@ -34,6 +40,9 @@
       "url": "https://universe.roboflow.com/practicabanano/conteobanano",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 50,
+      "imgs_en_disco": 50,
+      "disparos_originales": 50,
+      "dedup_aplicado": true,
       "rol": "descargado, SIN USAR"
     },
     {
@@ -44,6 +53,9 @@
       "url": "https://universe.roboflow.com/tesis-hpmog/etiquetasnuevas",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 505,
+      "imgs_en_disco": 505,
+      "disparos_originales": 505,
+      "dedup_aplicado": true,
       "rol": "train"
     },
     {
@@ -54,6 +66,9 @@
       "url": "https://universe.roboflow.com/agromatica2025/ml_agromatica",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 1312,
+      "imgs_en_disco": 1312,
+      "disparos_originales": 226,
+      "dedup_aplicado": false,
       "rol": "descargado, SIN USAR (tiene 2 clases: exige remapeo)"
     },
     {
@@ -64,6 +79,9 @@
       "url": "https://universe.roboflow.com/agromatica2025/plantas_jovenes_50m",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 378,
+      "imgs_en_disco": 378,
+      "disparos_originales": 72,
+      "dedup_aplicado": false,
       "rol": "train"
     },
     {
@@ -74,6 +92,9 @@
       "url": "https://universe.roboflow.com/agromatica2025/plantas_jovenes_80m1",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 2159,
+      "imgs_en_disco": 2159,
+      "disparos_originales": 407,
+      "dedup_aplicado": false,
       "rol": "train"
     },
     {
@@ -84,6 +105,9 @@
       "url": "https://universe.roboflow.com/agromatica2025/plantas_platano",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 1600,
+      "imgs_en_disco": 1600,
+      "disparos_originales": 304,
+      "dedup_aplicado": false,
       "rol": "train"
     },
     {
@@ -94,6 +118,9 @@
       "url": "https://universe.roboflow.com/daniel-f-tovar-r-s-workspace/platano-lasuiza",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 1039,
+      "imgs_en_disco": 1039,
+      "disparos_originales": 317,
+      "dedup_aplicado": false,
       "rol": "descargado, SIN USAR (v3 del mismo proyecto que newfarms/lasuiza v2)"
     },
     {
@@ -104,6 +131,9 @@
       "url": "https://universe.roboflow.com/entrenamiento-alterno-dgpgp/prueba2rgb",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 505,
+      "imgs_en_disco": 505,
+      "disparos_originales": 505,
+      "dedup_aplicado": true,
       "rol": "train"
     },
     {
@@ -114,6 +144,9 @@
       "url": "https://universe.roboflow.com/michael-armah/detecting-plantain-crops",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 148,
+      "imgs_en_disco": 62,
+      "disparos_originales": 62,
+      "dedup_aplicado": true,
       "rol": "HOLDOUT CIEGO — ningún modelo entrena con ella"
     },
     {
@@ -124,6 +157,9 @@
       "url": "https://universe.roboflow.com/conteobanano/proyecto_plantas-banano",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 99,
+      "imgs_en_disco": 99,
+      "disparos_originales": 58,
+      "dedup_aplicado": false,
       "rol": "descartado: sub-etiquetado"
     },
     {
@@ -134,6 +170,9 @@
       "url": "https://universe.roboflow.com/elliot-su-mv7fl/banana-tree-detection",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 416,
+      "imgs_en_disco": 396,
+      "disparos_originales": 396,
+      "dedup_aplicado": true,
       "rol": "train desde v12"
     },
     {
@@ -144,6 +183,9 @@
       "url": "https://universe.roboflow.com/karachi-university-lf1qq/plant-count-r4cob",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 1922,
+      "imgs_en_disco": 1922,
+      "disparos_originales": 808,
+      "dedup_aplicado": false,
       "rol": "descartado: cultivo sin confirmar"
     },
     {
@@ -154,6 +196,9 @@
       "url": "https://universe.roboflow.com/daniel-f-tovar-r-s-workspace/platano-lasuiza",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 366,
+      "imgs_en_disco": 151,
+      "disparos_originales": 151,
+      "dedup_aplicado": true,
       "rol": "train desde v12"
     },
     {
@@ -164,6 +209,9 @@
       "url": "https://universe.roboflow.com/m2-eewev/plantain-detection",
       "licencia": "CC BY 4.0",
       "imgs_exportadas": 197,
+      "imgs_en_disco": 197,
+      "disparos_originales": 197,
+      "dedup_aplicado": true,
       "rol": "train desde v12"
     }
   ]

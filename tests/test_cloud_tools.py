@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import subprocess
 import sys
 
@@ -194,3 +195,91 @@ def test_prueba2rgb_no_se_incluye_junto_a_etiquetasnuevas():
     # y lo mismo con las dos versiones del proyecto platano-lasuiza
     assert "newfarms/lasuiza" in todas
     assert "extra/platano-lasuiza" not in todas
+
+
+# ---------------------------------------------------------------------- dedup Roboflow
+
+
+def _roboflow(base, dataset, split, original, hashes):
+    """Simula la exportacion de Roboflow: <original>_jpg.rf.<hash>.jpg, N copias."""
+    d_img = base / dataset / split / "images"
+    d_lab = base / dataset / split / "labels"
+    d_img.mkdir(parents=True, exist_ok=True)
+    d_lab.mkdir(parents=True, exist_ok=True)
+    for h in hashes:
+        n = f"{original}_jpg.rf.{h}.jpg"
+        Image.fromarray(np.zeros((32, 32, 3), dtype=np.uint8)).save(d_img / n)
+        (d_lab / f"{original}_jpg.rf.{h}.txt").write_text("0 0.5 0.5 0.2 0.2\n")
+
+
+def test_dedup_deja_una_copia_por_disparo_original(tmp_path):
+    # Es lo que hace que el holdout de la nube sea el mismo que se midio en casa: armah
+    # se descarga con 148 imagenes y tiene que quedarse en 62.
+    from cloud.fetch_data import deduplica
+
+    _roboflow(tmp_path, "finca", "train", "foto_a", ["aa11", "bb22", "cc33"])
+    _roboflow(tmp_path, "finca", "train", "foto_b", ["dd44"])
+    augmentadas, cruzadas = deduplica(tmp_path / "finca")
+
+    assert (augmentadas, cruzadas) == (2, 0)
+    quedan = sorted(p.name for p in (tmp_path / "finca" / "train" / "images").iterdir())
+    assert quedan == ["foto_a_jpg.rf.aa11.jpg", "foto_b_jpg.rf.dd44.jpg"]
+    # la etiqueta se va con su imagen, no se queda huerfana
+    assert sorted(p.stem for p in (tmp_path / "finca" / "train" / "labels").iterdir()) == [
+        "foto_a_jpg.rf.aa11",
+        "foto_b_jpg.rf.dd44",
+    ]
+
+
+def test_dedup_borra_del_test_lo_que_esta_en_train(tmp_path):
+    # Roboflow reparte a veces el MISMO disparo entre train y test: eso es una fuga dentro
+    # del propio dataset. Gana train, y el test se queda limpio (7 casos reales en elliot).
+    from cloud.fetch_data import deduplica
+
+    _roboflow(tmp_path, "finca", "train", "foto_x", ["ff99"])
+    _roboflow(tmp_path, "finca", "test", "foto_x", ["aa00"])
+    _roboflow(tmp_path, "finca", "valid", "foto_x", ["bb11"])
+    augmentadas, cruzadas = deduplica(tmp_path / "finca")
+
+    assert (augmentadas, cruzadas) == (0, 2)
+    assert [p.name for p in (tmp_path / "finca" / "train" / "images").iterdir()] == [
+        "foto_x_jpg.rf.ff99.jpg"
+    ]
+    assert list((tmp_path / "finca" / "test" / "images").iterdir()) == []
+    assert list((tmp_path / "finca" / "valid" / "images").iterdir()) == []
+
+
+def test_el_manifiesto_dice_que_fuentes_hay_que_deduplicar():
+    # No es uniforme y no puede serlo: count_banana_plants conserva a proposito las dos
+    # copias augmentadas de cada disparo (502 = 251x2 en su train), mientras que las de
+    # newfarms/ se limpiaron. Si se aplica el mismo criterio a todas, el dataset de la
+    # nube deja de ser el que se midio.
+    import json
+
+    m = json.loads((pathlib.Path(RAIZ) / "cloud" / "data_manifest.json").read_text(encoding="utf-8"))
+    por_carpeta = {f["carpeta"]: f for f in m["fuentes"]}
+
+    assert por_carpeta["newfarms/armah"]["dedup_aplicado"] is True
+    assert por_carpeta["newfarms/elliot"]["dedup_aplicado"] is True
+    assert por_carpeta["count_banana_plants"]["dedup_aplicado"] is False
+
+    # Y la diversidad real: mas imagenes no son mas fotos.
+    p80 = por_carpeta["extra/plantas_jovenes_80m1"]
+    assert p80["imgs_en_disco"] > 5 * p80["disparos_originales"] * 0.9
+
+
+def test_solo_se_deduplican_las_fuentes_que_lo_estaban(tmp_path):
+    # count_banana_plants conserva sus copias augmentadas a proposito; armah no. Si se
+    # aplica el mismo criterio a las dos, el dataset reconstruido en la nube deja de
+    # coincidir con el que produjo las cifras publicadas.
+    from cloud.fetch_data import debe_deduplicar
+
+    limpia = {"carpeta": "newfarms/armah", "dedup_aplicado": True}
+    augmentada = {"carpeta": "count_banana_plants", "dedup_aplicado": False}
+
+    assert debe_deduplicar(limpia, True) is True
+    assert debe_deduplicar(augmentada, True) is False
+    # --sin-dedup lo apaga todo
+    assert debe_deduplicar(limpia, False) is False
+    # una fuente sin el campo (manifiesto viejo) se deduplica: es lo conservador
+    assert debe_deduplicar({"carpeta": "x"}, True) is True

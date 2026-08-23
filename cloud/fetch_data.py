@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 import time
@@ -100,6 +101,74 @@ def _pide_enlace(fuente: dict[str, Any], key: str) -> tuple[str, float]:
     raise RuntimeError(f"no se pudo obtener el enlace de {fuente['carpeta']}: {ultimo}")
 
 
+# Roboflow exporta con augmentacion: el mismo original aparece varias veces, renombrado
+# <original>_jpg.rf.<hash>.jpg. Quedarse con una copia por original es lo que se hizo en
+# su dia a mano, y hay que reproducirlo o el holdout de la nube no es el que se midio:
+# armah baja de 148 a 62 imagenes y elliot de 416 a 396, que son exactamente los numeros
+# del disco del autor. Criterio: la PRIMERA por orden alfabetico, verificado contra las
+# 62 de armah (62 de 62 coinciden, y su contenido es identico byte a byte).
+RE_ROBOFLOW = re.compile(r"(.+?)(_jpe?g|_JPE?G|_png|_PNG)?\.rf\.[0-9a-f]+\.\w+$")
+
+
+# Prioridad al repartir un original que Roboflow puso en varios splits. Se conserva la
+# copia de train y se borran las de valid/test, que es lo que deja el TEST limpio: si una
+# imagen esta en el entrenamiento, no puede estar tambien en la validacion. Es lo mismo
+# que se hizo a mano en su dia (los 7 casos de elliot quedaron en train).
+PRIORIDAD_SPLIT = ("train", "valid", "test")
+
+
+def deduplica(carpeta: Path) -> tuple[int, int]:
+    """Deja una imagen por original en TODO el dataset, no por split.
+
+    Devuelve (copias_augmentadas_quitadas, copias_en_otro_split_quitadas). La segunda
+    cifra importa porque no es cosmetica: en elliot hay un original que Roboflow puso a
+    la vez en train y en test, o sea una fuga train/test dentro del propio dataset.
+    """
+    grupos: dict[str, list[Path]] = {}
+    for dir_img in carpeta.rglob("images"):
+        if not dir_img.is_dir():
+            continue
+        vistos: dict[str, Path] = {}
+        for f in dir_img.iterdir():
+            if f.suffix.lower() in {".jpg", ".jpeg", ".png"}:
+                vistos.setdefault(os.path.normcase(str(f)), f)
+        for f in vistos.values():
+            m = RE_ROBOFLOW.match(f.name)
+            grupos.setdefault(m.group(1) if m else f.name, []).append(f)
+
+    def orden(p: Path) -> tuple[int, str]:
+        split = p.parent.parent.name
+        rango = PRIORIDAD_SPLIT.index(split) if split in PRIORIDAD_SPLIT else len(PRIORIDAD_SPLIT)
+        return (rango, p.name)  # dentro del mismo split, la primera alfabeticamente
+
+    augmentadas = cruzadas = 0
+    for copias in grupos.values():
+        if len(copias) < 2:
+            continue
+        copias.sort(key=orden)
+        se_queda = copias[0]
+        for sobra in copias[1:]:
+            if sobra.parent.parent.name != se_queda.parent.parent.name:
+                cruzadas += 1
+            else:
+                augmentadas += 1
+            sobra.unlink(missing_ok=True)
+            (sobra.parent.parent / "labels" / (sobra.stem + ".txt")).unlink(missing_ok=True)
+    return augmentadas, cruzadas
+
+
+def debe_deduplicar(fuente: dict[str, Any], dedup_global: bool) -> bool:
+    """Si esta fuente hay que limpiarla de copias augmentadas.
+
+    No es uniforme y no puede serlo: count_banana_plants conserva a proposito las dos
+    copias de cada disparo en su train (502 = 251x2), mientras que las de newfarms/ se
+    limpiaron. El manifiesto lo lleva anotado fuente a fuente, medido del disco. Aplicar
+    el mismo criterio a todas haria que el dataset de la nube dejara de ser el que se
+    midio, y las metricas no serian comparables.
+    """
+    return dedup_global and bool(fuente.get("dedup_aplicado", True))
+
+
 def cuenta_imgs(carpeta: Path) -> int:
     if not carpeta.exists():
         return 0
@@ -110,7 +179,7 @@ def cuenta_imgs(carpeta: Path) -> int:
     return len(vistos)
 
 
-def descarga(fuente: dict[str, Any], destino: Path, key: str, forzar: bool) -> str:
+def descarga(fuente: dict[str, Any], destino: Path, key: str, forzar: bool, dedup: bool = True) -> str:
     carpeta = destino / fuente["carpeta"]
     esperadas = fuente.get("imgs_exportadas")
 
@@ -136,11 +205,17 @@ def descarga(fuente: dict[str, Any], destino: Path, key: str, forzar: bool) -> s
         z.extractall(carpeta)
     tmp.unlink(missing_ok=True)
 
+    bajadas = cuenta_imgs(carpeta)
+    augmentadas, cruzadas = deduplica(carpeta) if debe_deduplicar(fuente, dedup) else (0, 0)
     hay = cuenta_imgs(carpeta)
+    detalle = f"{hay} imgs"
+    if augmentadas or cruzadas:
+        detalle += f" (de {bajadas}: -{augmentadas} augmentadas"
+        detalle += f", -{cruzadas} repetidas entre splits)" if cruzadas else ")"
     aviso = ""
-    if esperadas and hay != esperadas:
-        aviso = f"  ¡OJO! el manifiesto decía {esperadas}"
-    return f"{hay} imgs, {tam_mb:.1f} MB{aviso}"
+    if esperadas and bajadas != esperadas:
+        aviso = f"  ¡OJO! el manifiesto decía {esperadas} bajadas"
+    return f"{detalle}, {tam_mb:.1f} MB{aviso}"
 
 
 def main() -> int:
@@ -153,6 +228,8 @@ def main() -> int:
     ap.add_argument("--nuevas", action="store_true", help="las 6 fincas nuevas de cloud/nuevas_fincas.json")
     ap.add_argument("--preentreno", action="store_true", help="los análogos de preentreno (piña, palma)")
     ap.add_argument("--forzar", action="store_true", help="re-descargar aunque exista")
+    ap.add_argument("--sin-dedup", action="store_true",
+                    help="conserva las copias augmentadas de Roboflow (por defecto se quitan)")
     args = ap.parse_args()
 
     manifiesto = json.loads(args.manifiesto.read_text(encoding="utf-8"))
@@ -197,7 +274,7 @@ def main() -> int:
         etiqueta = f"{f['carpeta']} (v{f['version']})"
         print(f"  {etiqueta:52s} ", end="", flush=True)
         try:
-            print(descarga(f, args.destino, key, args.forzar))
+            print(descarga(f, args.destino, key, args.forzar, dedup=not args.sin_dedup))
         except SystemExit:
             raise
         except Exception as e:
