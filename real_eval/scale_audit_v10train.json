@@ -1,0 +1,222 @@
+{
+  "imgsz": 768,
+  "rango_escala": 11.153846153846153,
+  "fuentes": [
+    {
+      "carpeta": "realdata\\extra\\plantas_platano\\train",
+      "imgs": 1512,
+      "ficheros_etiqueta": 1512,
+      "etiquetas_vacias_en_muestra": 6,
+      "cajas_por_img": 21.0,
+      "cajas_estimadas": 31820,
+      "img_w": 640,
+      "img_h": 640,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 13.0,
+      "planta_px_imgsz": 15.6,
+      "p10_px_imgsz": 11.4,
+      "p90_px_imgsz": 18.0,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\extra\\plantas_platano\\valid",
+      "imgs": 59,
+      "ficheros_etiqueta": 59,
+      "etiquetas_vacias_en_muestra": 8,
+      "cajas_por_img": 15.6,
+      "cajas_estimadas": 920,
+      "img_w": 640,
+      "img_h": 640,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 13.2,
+      "planta_px_imgsz": 15.9,
+      "p10_px_imgsz": 11.7,
+      "p90_px_imgsz": 18.0,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\extra\\plantas_jovenes_80m1\\train",
+      "imgs": 2044,
+      "ficheros_etiqueta": 2044,
+      "etiquetas_vacias_en_muestra": 13,
+      "cajas_por_img": 16.3,
+      "cajas_estimadas": 33307,
+      "img_w": 640,
+      "img_h": 640,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 14.0,
+      "planta_px_imgsz": 16.8,
+      "p10_px_imgsz": 14.4,
+      "p90_px_imgsz": 19.2,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\extra\\plantas_jovenes_80m1\\valid",
+      "imgs": 77,
+      "ficheros_etiqueta": 77,
+      "etiquetas_vacias_en_muestra": 5,
+      "cajas_por_img": 15.3,
+      "cajas_estimadas": 1176,
+      "img_w": 640,
+      "img_h": 640,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 14.2,
+      "planta_px_imgsz": 17.1,
+      "p10_px_imgsz": 14.7,
+      "p90_px_imgsz": 19.2,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\extra\\plantas_jovenes_50m\\train",
+      "imgs": 357,
+      "ficheros_etiqueta": 357,
+      "etiquetas_vacias_en_muestra": 0,
+      "cajas_por_img": 7.8,
+      "cajas_estimadas": 2776,
+      "img_w": 640,
+      "img_h": 640,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 17.5,
+      "planta_px_imgsz": 21.0,
+      "p10_px_imgsz": 20.4,
+      "p90_px_imgsz": 24.0,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\extra\\plantas_jovenes_50m\\valid",
+      "imgs": 14,
+      "ficheros_etiqueta": 14,
+      "etiquetas_vacias_en_muestra": 0,
+      "cajas_por_img": 6.6,
+      "cajas_estimadas": 92,
+      "img_w": 640,
+      "img_h": 640,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 17.5,
+      "planta_px_imgsz": 21.0,
+      "p10_px_imgsz": 20.4,
+      "p90_px_imgsz": 21.6,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\extra\\etiquetasnuevas\\valid",
+      "imgs": 102,
+      "ficheros_etiqueta": 102,
+      "etiquetas_vacias_en_muestra": 0,
+      "cajas_por_img": 6.3,
+      "cajas_estimadas": 642,
+      "img_w": 1600,
+      "img_h": 1300,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 96.5,
+      "planta_px_imgsz": 46.3,
+      "p10_px_imgsz": 27.7,
+      "p90_px_imgsz": 77.9,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\extra\\etiquetasnuevas\\train",
+      "imgs": 403,
+      "ficheros_etiqueta": 403,
+      "etiquetas_vacias_en_muestra": 0,
+      "cajas_por_img": 7.7,
+      "cajas_estimadas": 3111,
+      "img_w": 1600,
+      "img_h": 1300,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 101.0,
+      "planta_px_imgsz": 48.5,
+      "p10_px_imgsz": 28.5,
+      "p90_px_imgsz": 81.8,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\extra\\prueba2rgb\\valid",
+      "imgs": 116,
+      "ficheros_etiqueta": 116,
+      "etiquetas_vacias_en_muestra": 0,
+      "cajas_por_img": 3.4,
+      "cajas_estimadas": 393,
+      "img_w": 1600,
+      "img_h": 1300,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 109.8,
+      "planta_px_imgsz": 52.7,
+      "p10_px_imgsz": 30.4,
+      "p90_px_imgsz": 83.9,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\extra\\prueba2rgb\\train",
+      "imgs": 364,
+      "ficheros_etiqueta": 364,
+      "etiquetas_vacias_en_muestra": 0,
+      "cajas_por_img": 3.4,
+      "cajas_estimadas": 1227,
+      "img_w": 1600,
+      "img_h": 1300,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 113.2,
+      "planta_px_imgsz": 54.4,
+      "p10_px_imgsz": 29.4,
+      "p90_px_imgsz": 86.7,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\count_banana_plants\\valid",
+      "imgs": 150,
+      "ficheros_etiqueta": 150,
+      "etiquetas_vacias_en_muestra": 0,
+      "cajas_por_img": 13.1,
+      "cajas_estimadas": 1966,
+      "img_w": 480,
+      "img_h": 480,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 100.2,
+      "planta_px_imgsz": 160.3,
+      "p10_px_imgsz": 113.6,
+      "p90_px_imgsz": 208.0,
+      "frac_indetectable": 0.0005
+    },
+    {
+      "carpeta": "realdata\\count_banana_plants\\train",
+      "imgs": 502,
+      "ficheros_etiqueta": 502,
+      "etiquetas_vacias_en_muestra": 0,
+      "cajas_por_img": 10.6,
+      "cajas_estimadas": 5306,
+      "img_w": 480,
+      "img_h": 480,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 108.7,
+      "planta_px_imgsz": 174.0,
+      "p10_px_imgsz": 124.7,
+      "p90_px_imgsz": 230.4,
+      "frac_indetectable": 0.0
+    }
+  ]
+}

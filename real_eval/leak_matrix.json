@@ -1,0 +1,74 @@
+{
+  "pares": [
+    {
+      "a": "DS-v1",
+      "b": "DS-v2",
+      "comunes": 19109,
+      "pct_a": 81.5,
+      "pct_b": 68.6
+    },
+    {
+      "a": "count_banana_plants",
+      "b": "pose",
+      "comunes": 702,
+      "pct_a": 100.0,
+      "pct_b": 100.0
+    },
+    {
+      "a": "count_banana_plants",
+      "b": "count_clean",
+      "comunes": 652,
+      "pct_a": 92.9,
+      "pct_b": 100.0
+    },
+    {
+      "a": "count_banana_plants",
+      "b": "count_plus",
+      "comunes": 652,
+      "pct_a": 92.9,
+      "pct_b": 100.0
+    },
+    {
+      "a": "count_clean",
+      "b": "count_plus",
+      "comunes": 652,
+      "pct_a": 100.0,
+      "pct_b": 100.0
+    },
+    {
+      "a": "count_clean",
+      "b": "pose",
+      "comunes": 652,
+      "pct_a": 100.0,
+      "pct_b": 92.9
+    },
+    {
+      "a": "count_plus",
+      "b": "pose",
+      "comunes": 652,
+      "pct_a": 100.0,
+      "pct_b": 92.9
+    },
+    {
+      "a": "extra/etiquetasnuevas",
+      "b": "extra/prueba2rgb",
+      "comunes": 505,
+      "pct_a": 100.0,
+      "pct_b": 100.0
+    },
+    {
+      "a": "extra/platano-lasuiza",
+      "b": "newfarms/lasuiza",
+      "comunes": 84,
+      "pct_a": 8.1,
+      "pct_b": 55.6
+    },
+    {
+      "a": "extra/platano-lasuiza",
+      "b": "newfarms/_dupes",
+      "comunes": 70,
+      "pct_a": 6.7,
+      "pct_b": 21.8
+    }
+  ]
+}

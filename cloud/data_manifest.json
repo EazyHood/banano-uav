@@ -1,0 +1,170 @@
+{
+  "generado_por": "deep/build_manifest.py",
+  "fecha": "2026-08-23",
+  "nota": "Procedencia exacta de cada carpeta de realdata/, que está en .gitignore. Con esto cloud/fetch_data.py reconstruye el dataset en cualquier máquina sin subir imágenes desde el PC del autor. Todas las fuentes son CC BY 4.0 de Roboflow Universe.",
+  "avisos": [
+    "MISMO proyecto en dos carpetas (daniel-f-tovar-r-s-workspace/platano-lasuiza): extra/platano-lasuiza, newfarms/lasuiza. Si alguna vez se meten las dos en el mismo entrenamiento, hay fuga."
+  ],
+  "fuentes": [
+    {
+      "carpeta": "count_banana_plants",
+      "workspace": "count-banana-plants",
+      "proyecto": "count-banana-plants",
+      "version": 38,
+      "url": "https://universe.roboflow.com/count-banana-plants/count-banana-plants",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 702,
+      "rol": "train+val (finca original)"
+    },
+    {
+      "carpeta": "extra/banana_counting",
+      "workspace": "project-c5yqs",
+      "proyecto": "banana_counting",
+      "version": 1,
+      "url": "https://universe.roboflow.com/project-c5yqs/banana_counting",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 2346,
+      "rol": "descargado, SIN USAR en ningún entrenamiento"
+    },
+    {
+      "carpeta": "extra/conteobanano",
+      "workspace": "practicabanano",
+      "proyecto": "conteobanano",
+      "version": 1,
+      "url": "https://universe.roboflow.com/practicabanano/conteobanano",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 50,
+      "rol": "descargado, SIN USAR"
+    },
+    {
+      "carpeta": "extra/etiquetasnuevas",
+      "workspace": "tesis-hpmog",
+      "proyecto": "etiquetasnuevas",
+      "version": 2,
+      "url": "https://universe.roboflow.com/tesis-hpmog/etiquetasnuevas",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 505,
+      "rol": "train"
+    },
+    {
+      "carpeta": "extra/ml_agromatica",
+      "workspace": "agromatica2025",
+      "proyecto": "ml_agromatica",
+      "version": 6,
+      "url": "https://universe.roboflow.com/agromatica2025/ml_agromatica",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 1312,
+      "rol": "descargado, SIN USAR (tiene 2 clases: exige remapeo)"
+    },
+    {
+      "carpeta": "extra/plantas_jovenes_50m",
+      "workspace": "agromatica2025",
+      "proyecto": "plantas_jovenes_50m",
+      "version": 1775964387678,
+      "url": "https://universe.roboflow.com/agromatica2025/plantas_jovenes_50m",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 378,
+      "rol": "train"
+    },
+    {
+      "carpeta": "extra/plantas_jovenes_80m1",
+      "workspace": "agromatica2025",
+      "proyecto": "plantas_jovenes_80m1",
+      "version": 1,
+      "url": "https://universe.roboflow.com/agromatica2025/plantas_jovenes_80m1",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 2159,
+      "rol": "train"
+    },
+    {
+      "carpeta": "extra/plantas_platano",
+      "workspace": "agromatica2025",
+      "proyecto": "plantas_platano",
+      "version": 1,
+      "url": "https://universe.roboflow.com/agromatica2025/plantas_platano",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 1600,
+      "rol": "train"
+    },
+    {
+      "carpeta": "extra/platano-lasuiza",
+      "workspace": "daniel-f-tovar-r-s-workspace",
+      "proyecto": "platano-lasuiza",
+      "version": 3,
+      "url": "https://universe.roboflow.com/daniel-f-tovar-r-s-workspace/platano-lasuiza",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 1039,
+      "rol": "descargado, SIN USAR (v3 del mismo proyecto que newfarms/lasuiza v2)"
+    },
+    {
+      "carpeta": "extra/prueba2rgb",
+      "workspace": "entrenamiento-alterno-dgpgp",
+      "proyecto": "prueba2rgb",
+      "version": 1,
+      "url": "https://universe.roboflow.com/entrenamiento-alterno-dgpgp/prueba2rgb",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 505,
+      "rol": "train"
+    },
+    {
+      "carpeta": "newfarms/armah",
+      "workspace": "michael-armah",
+      "proyecto": "detecting-plantain-crops",
+      "version": 3,
+      "url": "https://universe.roboflow.com/michael-armah/detecting-plantain-crops",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 148,
+      "rol": "HOLDOUT CIEGO — ningún modelo entrena con ella"
+    },
+    {
+      "carpeta": "newfarms/conteo",
+      "workspace": "conteobanano",
+      "proyecto": "proyecto_plantas-banano",
+      "version": 3,
+      "url": "https://universe.roboflow.com/conteobanano/proyecto_plantas-banano",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 99,
+      "rol": "descartado: sub-etiquetado"
+    },
+    {
+      "carpeta": "newfarms/elliot",
+      "workspace": "elliot-su-mv7fl",
+      "proyecto": "banana-tree-detection",
+      "version": 1,
+      "url": "https://universe.roboflow.com/elliot-su-mv7fl/banana-tree-detection",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 416,
+      "rol": "train desde v12"
+    },
+    {
+      "carpeta": "newfarms/karachi",
+      "workspace": "karachi-university-lf1qq",
+      "proyecto": "plant-count-r4cob",
+      "version": 9,
+      "url": "https://universe.roboflow.com/karachi-university-lf1qq/plant-count-r4cob",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 1922,
+      "rol": "descartado: cultivo sin confirmar"
+    },
+    {
+      "carpeta": "newfarms/lasuiza",
+      "workspace": "daniel-f-tovar-r-s-workspace",
+      "proyecto": "platano-lasuiza",
+      "version": 2,
+      "url": "https://universe.roboflow.com/daniel-f-tovar-r-s-workspace/platano-lasuiza",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 366,
+      "rol": "train desde v12"
+    },
+    {
+      "carpeta": "newfarms/m2",
+      "workspace": "m2-eewev",
+      "proyecto": "plantain-detection",
+      "version": 12,
+      "url": "https://universe.roboflow.com/m2-eewev/plantain-detection",
+      "licencia": "CC BY 4.0",
+      "imgs_exportadas": 197,
+      "rol": "train desde v12"
+    }
+  ]
+}

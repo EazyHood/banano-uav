@@ -1,0 +1,33 @@
+path: ../realdata
+train:
+  - count_banana_plants/train/images
+  - count_banana_plants/test/images
+  - extra/plantas_jovenes_50m/train/images
+  - extra/plantas_jovenes_50m/test/images
+  - extra/plantas_jovenes_80m1/train/images
+  - extra/plantas_jovenes_80m1/test/images
+  - extra/plantas_platano/train/images
+  - extra/plantas_platano/test/images
+  - extra/etiquetasnuevas/train/images
+  - newfarms/elliot/train/images
+  - newfarms/elliot/test/images
+  - newfarms/m2/train/images
+  - newfarms/m2/test/images
+  - newfarms/lasuiza/train/images
+  - newfarms/lasuiza/test/images
+  - newfarms/armah/train/images
+  - newfarms/armah/test/images
+val:
+  - count_banana_plants/valid/images
+  - extra/plantas_jovenes_50m/valid/images
+  - extra/plantas_jovenes_80m1/valid/images
+  - extra/plantas_platano/valid/images
+  - extra/etiquetasnuevas/valid/images
+  - newfarms/elliot/valid/images
+  - newfarms/m2/valid/images
+  - newfarms/lasuiza/valid/images
+  - newfarms/armah/valid/images
+nc: 1
+names: ['banana_plant']
+# Entrenamiento con todas las fincas disponibles; valida en el split 'valid' de cada una.
+# No mide generalización a finca nueva: para eso están los lofo_*.yaml.

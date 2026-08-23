@@ -1,0 +1,99 @@
+{
+  "raiz_declarada": "../realdata",
+  "fincas": {
+    "original": {
+      "carpetas": [
+        "count_banana_plants"
+      ],
+      "nota": "finca del dataset count-banana-plants. 480x480, planta ~169 px a imgsz 768."
+    },
+    "agromatica": {
+      "carpetas": [
+        "extra/plantas_jovenes_50m",
+        "extra/plantas_jovenes_80m1",
+        "extra/plantas_platano"
+      ],
+      "nota": "workspace agromatica2025: tres vuelos (50 m, 80 m, plátano) del mismo operador. Se agrupan como UNA finca. Aportan el 81% de las cajas del entrenamiento de v10, todas de 16-21 px: son las que sesgan el modelo hacia objetos diminutos."
+    },
+    "tesis": {
+      "carpetas": [
+        "extra/etiquetasnuevas"
+      ],
+      "nota": "IMPORTANTE: extra/prueba2rgb es este MISMO dataset (505 imágenes idénticas por MD5, subidas a otro workspace). Se usa sólo una de las dos copias; incluir ambas duplicaba el peso en el entrenamiento y fugaba el test."
+    },
+    "elliot": {
+      "carpetas": [
+        "newfarms/elliot"
+      ],
+      "nota": "plantación joven sobre suelo desnudo, ~99 cajas/img, planta ~31 px."
+    },
+    "m2": {
+      "carpetas": [
+        "newfarms/m2"
+      ],
+      "nota": "plátano disperso en ladera. Planta ~10 px a imgsz 768: en el límite de lo detectable."
+    },
+    "lasuiza": {
+      "carpetas": [
+        "newfarms/lasuiza"
+      ],
+      "nota": "Colombia, plátano adulto. Planta ~333 px: el extremo opuesto a agromatica. extra/platano-lasuiza es el mismo proyecto de Roboflow en otra versión (84 imágenes compartidas): NO usar las dos a la vez."
+    },
+    "armah": {
+      "carpetas": [
+        "newfarms/armah"
+      ],
+      "nota": "Ghana, paisaje mixto con palma aceitera. Planta ~45 px. Holdout histórico del repo: ningún modelo publicado ha entrenado con ella. Se mantiene reservada."
+    }
+  },
+  "generados": [
+    {
+      "yaml": "lofo_original.yaml",
+      "retenida": "original",
+      "fuentes_train": 23,
+      "fuentes_val": 3
+    },
+    {
+      "yaml": "lofo_agromatica.yaml",
+      "retenida": "agromatica",
+      "fuentes_train": 17,
+      "fuentes_val": 9
+    },
+    {
+      "yaml": "lofo_tesis.yaml",
+      "retenida": "tesis",
+      "fuentes_train": 24,
+      "fuentes_val": 2
+    },
+    {
+      "yaml": "lofo_elliot.yaml",
+      "retenida": "elliot",
+      "fuentes_train": 23,
+      "fuentes_val": 3
+    },
+    {
+      "yaml": "lofo_m2.yaml",
+      "retenida": "m2",
+      "fuentes_train": 23,
+      "fuentes_val": 3
+    },
+    {
+      "yaml": "lofo_lasuiza.yaml",
+      "retenida": "lasuiza",
+      "fuentes_train": 23,
+      "fuentes_val": 3
+    },
+    {
+      "yaml": "lofo_armah.yaml",
+      "retenida": "armah",
+      "fuentes_train": 23,
+      "fuentes_val": 3
+    },
+    {
+      "yaml": "todas_las_fincas.yaml",
+      "retenida": null,
+      "fuentes_train": 17,
+      "fuentes_val": 9
+    }
+  ]
+}

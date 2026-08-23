@@ -1,0 +1,34 @@
+path: ../realdata
+train:
+  - count_banana_plants/train/images
+  - count_banana_plants/valid/images
+  - count_banana_plants/test/images
+  - extra/plantas_jovenes_50m/train/images
+  - extra/plantas_jovenes_50m/valid/images
+  - extra/plantas_jovenes_50m/test/images
+  - extra/plantas_jovenes_80m1/train/images
+  - extra/plantas_jovenes_80m1/valid/images
+  - extra/plantas_jovenes_80m1/test/images
+  - extra/plantas_platano/train/images
+  - extra/plantas_platano/valid/images
+  - extra/plantas_platano/test/images
+  - newfarms/elliot/train/images
+  - newfarms/elliot/valid/images
+  - newfarms/elliot/test/images
+  - newfarms/m2/train/images
+  - newfarms/m2/valid/images
+  - newfarms/m2/test/images
+  - newfarms/lasuiza/train/images
+  - newfarms/lasuiza/valid/images
+  - newfarms/lasuiza/test/images
+  - newfarms/armah/train/images
+  - newfarms/armah/valid/images
+  - newfarms/armah/test/images
+val:
+  - extra/etiquetasnuevas/train/images
+  - extra/etiquetasnuevas/valid/images
+nc: 1
+names: ['banana_plant']
+# LOFO: entrena con 6 fincas y valida en 'tesis', que queda
+# ENTERA fuera del entrenamiento (sus 3 splits). Generado por cloud/make_splits.py.
+# IMPORTANTE: extra/prueba2rgb es este MISMO dataset (505 imágenes idénticas por MD5, subidas a otro workspace). Se usa sólo una de las dos copias; incluir ambas duplicaba el peso en el entrenamiento y fugaba el test.
