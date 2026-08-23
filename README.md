@@ -198,11 +198,21 @@ banano-detect --input tu_ortofoto.tif --gsd 3.0 \
 
 > 🔍 **Por qué falla en finca nueva: es, en primer lugar, un problema de escala.**
 > [`deep/scale_audit.py`](deep/scale_audit.py) mide que a imgsz 768 la planta mediana ocupa
-> **10 px en una finca y 333 px en otra** (35×), y que el **81 % de las cajas** con las que se
-> entrenó v10 son plantas de **16-21 px**. La finca nueva las tiene de 45 px, en una banda que
+> **10 px en una finca y 333 px en otra** (33×), y que el **81 % de las cajas** con las que se
+> entrenó v10 son plantas de **16-17 px**. La finca nueva las tiene de 45 px, en una banda que
 > apenas aparece en el entrenamiento (menos del 1 % de las cajas entre 21 y 46 px). Eso explica
 > el recall de 0,139 mejor que "otro suelo, otra luz", y explica que v12 —entrenado con más
 > fincas— *empeorase* ahí: añadió masa en los extremos (10 px y 333 px), no donde esa finca vive.
+>
+> Y tiene una consecuencia práctica que **no cuesta ni una hora de GPU**: subir la resolución de
+> inferencia de 768 a **1024** sube el mAP50 de esa finca de 0,172 a **0,285** y el recall de
+> 0,139 a **0,229** (+65 % ambos), con los mismos pesos. Medido, reproducible y con su letra
+> pequeña —incluido lo que *no* arregla— en
+> [`docs/escala-y-fugas.md`](docs/escala-y-fugas.md).
+
+> 🖥️ **Entrenar sin usar tu ordenador.** Todo el camino —descargar los datos, repartirlos por
+> fincas, comprobar fugas y entrenar— corre en una GPU gratuita de la nube con un solo comando,
+> y el PC se puede apagar: [`kaggle/README.md`](kaggle/README.md).
 
 El error del conteo *total* compensa sobre- y sub-conteos entre imágenes, así que va siempre
 acompañado del error **por imagen**. Todo el detalle, la calibración cruzada con la que se
