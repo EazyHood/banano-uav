@@ -283,3 +283,32 @@ def test_solo_se_deduplican_las_fuentes_que_lo_estaban(tmp_path):
     assert debe_deduplicar(limpia, False) is False
     # una fuente sin el campo (manifiesto viejo) se deduplica: es lo conservador
     assert debe_deduplicar({"carpeta": "x"}, True) is True
+
+
+def test_la_verdad_de_terreno_acepta_cajas_y_poligonos(tmp_path):
+    # realdata/newfarms/lasuiza trae POLIGONOS, no cajas: 61 de 61 lineas de su test.
+    # Leerlos con p[1:5] tomaba los dos primeros vertices como centro y tamano, sin dar
+    # error: cajas disparatadas en silencio.
+    from deep.eval_ensemble import _gt_cajas
+
+    d = tmp_path / "split"
+    (d / "images").mkdir(parents=True)
+    (d / "labels").mkdir(parents=True)
+    img = d / "images" / "a.jpg"
+    img.touch()
+
+    # caja: centro (0.5, 0.5), lado 0.2  ->  xyxy 0.4-0.6 sobre 100 px = 40..60
+    (d / "labels" / "a.txt").write_text("0 0.5 0.5 0.2 0.2\n")
+    caja = _gt_cajas(img, 100, 100)
+    assert caja.shape == (1, 4)
+    assert list(caja[0]) == [40.0, 40.0, 60.0, 60.0]
+
+    # el MISMO cuadrado escrito como poligono tiene que dar la MISMA caja
+    (d / "labels" / "a.txt").write_text("0 0.4 0.4 0.6 0.4 0.6 0.6 0.4 0.6\n")
+    poli = _gt_cajas(img, 100, 100)
+    assert poli.shape == (1, 4)
+    assert np.allclose(poli[0], caja[0])
+
+    # y leerlo como si fuera una caja habria dado algo muy distinto: con p[1:5] el
+    # centro seria (0.4, 0.4) y el tamano (0.6, 0.4) -> x de 10 a 70, no de 40 a 60
+    assert not np.allclose(poli[0], [10.0, 20.0, 70.0, 60.0])
