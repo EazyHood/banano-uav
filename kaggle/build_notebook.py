@@ -98,7 +98,7 @@ if not torch.cuda.is_available() or not hay_red:
 REPO = {REPO!r}
 RAMA = {RAMA!r}
 WORK = "/kaggle/working"
-SRC  = f"{{WORK}}/banano-uav"
+SRC  = "/kaggle/temp/banano-uav"   # scratch: NO se autoguarda como salida
 
 if not os.path.isdir(SRC):
     subprocess.run(["git", "clone", "--depth", "1", "-b", RAMA, REPO, SRC], check=True)
@@ -245,8 +245,7 @@ for csv in glob.glob(f"{WORK}/runs/**/results.csv", recursive=True):
     etiqueta = csv.split("/runs/")[1].split("/results")[0].replace("/", "_")
     shutil.copy2(csv, f"{SALIDA}/{etiqueta}_results.csv")
 
-# El clon del repo y los datos no pintan nada en la salida.
-shutil.rmtree(SRC, ignore_errors=True)
+# El clon vive en el scratch, asi que no ensucia la salida ni aunque esto no se ejecute.
 print(f"\\nlisto en {(time.time()-T0)/3600:.2f} h")
 print("\\n".join(sorted(os.listdir(SALIDA))))""",
     ),
