@@ -237,30 +237,40 @@ if HACER_BARRIDO:
     (
         "code",
         """# --- 8. Entrenar -------------------------------------------------------------------
-# La T4 tiene 16 GB frente a los 8 GB de casa, asi que cabe mas lote y no hay que
-# forzar workers=0 (aquello era un problema de Windows).
-IMGSZ   = 1024      # el barrido de arriba manda: si su optimo medio es otro, cambialo
-# PRIMERA PASADA = CALIBRACION. Las corridas anteriores de este proyecto dan 637 s/epoca a
-# 1024 px en una RTX 5060 con batch 4; 100 epocas serian ~17 h y NO caben en las 12 h de
-# Kaggle. Aqui no se sabe todavia cuanto tarda una epoca en dos T4 con mas batch, asi que
-# esta corrida sirve para medirlo con el pipeline entero funcionando. Con el s/epoca real
-# de results.csv se dimensiona la siguiente sin adivinar.
-EPOCHS  = 40
-RECETA  = "escala"  # v10 | cenital | escala   (ver cloud/train.py)
-MODELO  = "yolo11m.pt"
-DATA    = f"{SPLITS}/todas_las_fincas.yaml"
+# La T4 tiene 14,6 GB frente a los 8 GB de casa, asi que cabe mas lote y no hay que forzar
+# workers=0 (aquello era un problema de Windows). Se usa UNA sola GPU aunque haya dos: con
+# device="0,1" ultralytics lanza DDP y eso muere dentro de un notebook de Kaggle (medido).
+IMGSZ  = 1024      # el barrido de arriba manda; si su optimo medio es otro, cambialo
+RECETA = "escala"  # v10 | cenital | escala   (ver cloud/train.py)
+MODELO = "yolo11m.pt"
+DATA   = f"{SPLITS}/todas_las_fincas.yaml"
 
+# NO se fijan epocas: se fija TIEMPO. La primera corrida midio 6,6 s por iteracion con 329
+# iteraciones por epoca, o sea 36 min/epoca: 40 epocas habrian sido 24 h y la sesion muere a
+# las 12. `--horas` se lo pasa a ultralytics, que lo comprueba al final de cada epoca y para
+# solo dejando el best.pt escrito. Asi la corrida SIEMPRE cabe, entrene lo que entrene.
 restante_h = LIMITE_H - (time.time() - T0) / 3600
-print(f"quedan {restante_h:.1f} h de las {LIMITE_H} presupuestadas\\n")
+horas_entreno = max(0.5, restante_h - 0.4)   # margen para guardar y recoger
+print(f"llevamos {(time.time()-T0)/3600:.2f} h; se entrena un maximo de {horas_entreno:.2f} h")
 
-subprocess.run([sys.executable, f"{SRC}/cloud/train.py",
-                "--data", DATA,
-                "--receta", RECETA,
-                "--modelo", MODELO,
-                "--imgsz", str(IMGSZ),
-                "--epochs", str(EPOCHS),
-                "--proyecto", f"{WORK}/runs",
-                "--salida", f"{WORK}/cloud_runs.json"], check=False, cwd=SRC)""",
+r = subprocess.run([sys.executable, f"{SRC}/cloud/train.py",
+                    "--data", DATA,
+                    "--receta", RECETA,
+                    "--modelo", MODELO,
+                    "--imgsz", str(IMGSZ),
+                    "--horas", f"{horas_entreno:.2f}",
+                    "--epochs", "300",
+                    "--proyecto", f"{WORK}/runs",
+                    "--salida", f"{WORK}/cloud_runs.json"], cwd=SRC)
+
+# La primera vez esto era check=False y no se miraba: el entrenamiento murio en la primera
+# iteracion, el notebook siguio hasta el final y la sesion se dio por buena. Un fallo aqui
+# tiene que verse.
+if r.returncode != 0:
+    print(f"AVISO: el entrenamiento termino con codigo {r.returncode}. "
+          f"Mira {WORK}/cloud_runs.json para el motivo.")
+
+"""
     ),
     (
         "code",

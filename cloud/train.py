@@ -120,15 +120,20 @@ def decide(info: dict[str, Any], batch: int | None, workers: int | None) -> tupl
     if not info.get("cuda"):
         return "cpu", batch or 4, workers or 2
 
-    device = ",".join(str(i) for i in range(info["gpus"])) if info.get("gpus", 1) > 1 else "0"
+    # UNA sola GPU por defecto, aunque haya dos. Con device="0,1" ultralytics no entrena en
+    # el proceso actual: lanza `torch.distributed.run` (DDP) sobre un fichero temporal que
+    # genera al vuelo, y eso muere dentro de un notebook de Kaggle. Medido el 2026-08-24:
+    #   Command '[...torch.distributed.run --nproc_per_node 2 ...DDP/_temp_....py]'
+    #   returned non-zero exit status 1
+    # El entrenamiento arranco, hizo UNA iteracion y murio; el notebook siguio como si nada
+    # y la sesion se perdio. La segunda T4 no compensa ese riesgo: se pide a proposito.
+    device = "0"
 
     if batch is None:
         vram = info.get("vram_gb", 8)
         # medido en la RTX 5060 (8 GiB): con batch 8 a 768px CUDA paginaba a memoria
         # compartida y el paso iba 9 veces más lento. Se deja margen.
         batch = 4 if vram < 10 else (8 if vram < 16 else 16)
-        if info.get("gpus", 1) > 1:
-            batch *= info["gpus"]
 
     if workers is None:
         # En Windows el DataLoader con workers>0 murió repetidamente (v2 y seg2), y tras
@@ -153,6 +158,12 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
         print(f"  reanudando desde {ultimo}")
 
     hiper = {k: v for k, v in receta.items() if not k.startswith("_")}
+    if args.horas:
+        # `time` de ultralytics manda sobre `epochs` y lo comprueba al final de cada epoca
+        # (engine/trainer.py:547). Es la forma honesta de encajar en una sesion con limite:
+        # en vez de adivinar cuantas epocas caben —la primera estimacion dio 24 h para 40—,
+        # se le dice cuanto tiempo tiene y para solo, dejando el best.pt escrito.
+        hiper["time"] = args.horas
     t0 = time.time()
     modelo = YOLO(punto)
     modelo.train(
@@ -185,6 +196,7 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
         "modelo_base": args.modelo,
         "imgsz": args.imgsz,
         "epochs": args.epochs,
+        "horas_tope": args.horas,
         "batch": batch,
         "workers": workers,
         "device": device,
@@ -215,6 +227,8 @@ def main() -> int:
     ap.add_argument("--modelo", default="yolo11m.pt")
     ap.add_argument("--imgsz", type=int, default=768)
     ap.add_argument("--epochs", type=int, default=80)
+    ap.add_argument("--horas", type=float, default=None,
+                    help="tope de horas; manda sobre --epochs y para solo al agotarse")
     ap.add_argument("--patience", type=int, default=20)
     ap.add_argument("--batch", type=int, default=None, help="por defecto, según la VRAM")
     ap.add_argument("--workers", type=int, default=None, help="por defecto, 0 en Windows y 8 fuera")

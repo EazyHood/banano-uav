@@ -83,6 +83,50 @@ mismos pesos.
 > repo ya corrigió una vez en `eval_count.py`. El valor que se publique tiene que salir del
 > promedio LOFO: `cloud/scale_sweep.py --todas-las-fincas`.
 
+### El barrido completo, sobre las 6 fincas retenidas (2026-08-24, en Kaggle)
+
+El aviso de método de arriba se cumplió: **elegir 1024 mirando `armah` habría sido un error**.
+Con el barrido hecho sobre todas las fincas, el óptimo del promedio no es el óptimo de ninguna.
+
+| finca retenida | planta a 768 px | imgsz óptimo | planta AL óptimo | mAP50 | (a 768 px) |
+|---|---:|---:|---:|---:|---:|
+| `lofo_original` | 169 px | **640** | 141 px | 0.9528 | 0.9481 |
+| `lofo_agromatica` | 17 px | **768** | 17 px | 0.9087 | 0.9087 |
+| `lofo_armah` | 45 px | **1024** | 60 px | 0.2847 | 0.1724 |
+| `lofo_lasuiza` | 333 px | **1280** | 555 px | 0.5602 | 0.1573 |
+| `lofo_elliot` | 31 px | **1536** | 62 px | 0.2162 | **0.0032** |
+| `lofo_m2` | 10 px | — | — | **0.0000** | 0.0000 |
+
+Promedio por resolución: el mejor es **1152 (mAP50 medio 0.4708)** — y **gana en 0 de las 6
+fincas**. Ese es el aviso que salta en `cloud/scale_sweep.py`: un promedio que no gana en
+ninguna parte no es una recomendación, es el punto medio de cosas que no se parecen.
+
+**Lo que esto sí dice, y es más útil que un número único:**
+
+1. **La escala manda, confirmado y en grande.** En `lofo_elliot` el mAP50 pasa de **0.0032 a
+   0.2162** (×68) sólo cambiando la resolución de entrada, sin tocar un peso. En `lofo_lasuiza`,
+   de 0.1573 a 0.5602 (×3,6). Lo que parecía "el modelo no sirve para esta finca" era, en buena
+   parte, mirarla al tamaño equivocado.
+2. **Pero no hay un imgsz universal.** Las fincas que el modelo conoce bien (`original`,
+   `agromatica`) rinden mejor cerca de su tamaño nativo y **empeoran** al subir la resolución.
+   Publicar "usa 1024" sería vender como general lo que sólo vale para una finca.
+3. **Las dos fincas nuevas convergen a ~60 px de planta.** `armah` (nativo 45 px) mejora a 1024,
+   donde la planta mide 60 px; `elliot` (nativo 31 px) mejora a 1536, donde mide 62 px. Con dos
+   casos no es una ley, pero sí una regla de arranque mucho más honesta que un imgsz fijo:
+   **en una finca nueva, elige la resolución que ponga tu planta cerca de 60 px**, en vez de
+   copiar el número de otro.
+4. **`lofo_m2` da 0.0000 a TODAS las resoluciones.** Sus plantas miden ~10 px y bajar el imgsz
+   no arregla nada, porque el problema no es sólo relativo: por debajo de ~8 px un objeto no
+   tiene ni una celda propia en el mapa de características más fino. Es el caso que la
+   resolución no salva.
+
+La consecuencia para el entrenamiento es directa, y es lo que hace la receta `escala`: si el
+tamaño útil cambia tanto entre fincas, el modelo tiene que ver ese rango **durante** el
+entrenamiento (`scale` como tupla absoluta y `multi_scale`), en vez de esperar que quien lo use
+acierte con el imgsz.
+
+Datos completos: [`real_eval/scale_sweep_lofo_v10.json`](../real_eval/scale_sweep_lofo_v10.json).
+
 ---
 
 ## 2. Una de las cifras publicadas está contaminada

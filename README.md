@@ -204,10 +204,24 @@ banano-detect --input tu_ortofoto.tif --gsd 3.0 \
 > el recall de 0,139 mejor que "otro suelo, otra luz", y explica que v12 —entrenado con más
 > fincas— *empeorase* ahí: añadió masa en los extremos (10 px y 333 px), no donde esa finca vive.
 >
-> Y tiene una consecuencia práctica que **no cuesta ni una hora de GPU**: subir la resolución de
-> inferencia de 768 a **1024** sube el mAP50 de esa finca de 0,172 a **0,285** y el recall de
-> 0,139 a **0,229** (+65 % ambos), con los mismos pesos. Medido, reproducible y con su letra
-> pequeña —incluido lo que *no* arregla— en
+> Y tiene una consecuencia práctica que **no cuesta ni una hora de GPU**: ajustar la resolución
+> de inferencia a la finca. Medido sobre las 6 fincas retenidas (barrido completo en
+> [`real_eval/scale_sweep_lofo_v10.json`](real_eval/scale_sweep_lofo_v10.json)), con los mismos
+> pesos y sin reentrenar nada:
+>
+> | finca retenida | imgsz óptimo | mAP50 ahí | mAP50 a 768 px |
+> |---|---:|---:|---:|
+> | `elliot` | 1536 | 0,2162 | **0,0032** (×68) |
+> | `lasuiza` | 1280 | 0,5602 | 0,1573 (×3,6) |
+> | `armah` | 1024 | 0,2847 | 0,1724 (+65 %) |
+> | `agromatica` | 768 | 0,9087 | 0,9087 |
+> | `original` | 640 | 0,9528 | 0,9481 |
+>
+> ⚠️ **No hay un imgsz universal, y conviene no copiarlo de nadie.** El mejor valor *de media*
+> es 1152, y **no gana en ninguna de las seis fincas**. Las que el modelo ya conoce empeoran al
+> subir la resolución. Lo que sí se repite: las dos fincas nuevas rinden mejor cuando la planta
+> se ve a **~60 px** — así que en una finca nueva, elige el `--model-imgsz` que ponga *tu*
+> planta cerca de ese tamaño. Todo el detalle, incluido lo que **no** arregla, en
 > [`docs/escala-y-fugas.md`](docs/escala-y-fugas.md).
 
 > 🖥️ **Entrenar sin usar tu ordenador.** Todo el camino —descargar los datos, repartirlos por

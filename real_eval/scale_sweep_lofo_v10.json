@@ -1,0 +1,479 @@
+{
+  "pesos": "banana_multifarm_v10.pt",
+  "device": "0",
+  "conf": 0.001,
+  "max_det": 1000,
+  "nota_metodo": "El imgsz que se publique debe salir del promedio LOFO, no de una sola finca: elegirlo mirando armah es afinar sobre el holdout.",
+  "fincas": {
+    "lofo_agromatica": {
+      "barrido": [
+        {
+          "imgsz": 640,
+          "mAP50": 0.8986,
+          "mAP50_95": 0.5268,
+          "precision": 0.9181,
+          "recall": 0.8303,
+          "segundos": 131.2
+        },
+        {
+          "imgsz": 768,
+          "mAP50": 0.9087,
+          "mAP50_95": 0.554,
+          "precision": 0.9233,
+          "recall": 0.8383,
+          "segundos": 178.4
+        },
+        {
+          "imgsz": 896,
+          "mAP50": 0.9068,
+          "mAP50_95": 0.5567,
+          "precision": 0.9233,
+          "recall": 0.8323,
+          "segundos": 248.6
+        },
+        {
+          "imgsz": 1024,
+          "mAP50": 0.9021,
+          "mAP50_95": 0.5525,
+          "precision": 0.9168,
+          "recall": 0.83,
+          "segundos": 322.3
+        },
+        {
+          "imgsz": 1152,
+          "mAP50": 0.8889,
+          "mAP50_95": 0.5267,
+          "precision": 0.9079,
+          "recall": 0.8144,
+          "segundos": 404.8
+        },
+        {
+          "imgsz": 1280,
+          "mAP50": 0.8902,
+          "mAP50_95": 0.5272,
+          "precision": 0.9117,
+          "recall": 0.8205,
+          "segundos": 497.5
+        },
+        {
+          "imgsz": 1536,
+          "mAP50": 0.8224,
+          "mAP50_95": 0.4164,
+          "precision": 0.8531,
+          "recall": 0.7495,
+          "segundos": 710.9
+        }
+      ],
+      "mejor": {
+        "imgsz": 768,
+        "mAP50": 0.9087,
+        "mAP50_95": 0.554,
+        "precision": 0.9233,
+        "recall": 0.8383,
+        "segundos": 178.4
+      },
+      "base_768": {
+        "imgsz": 768,
+        "mAP50": 0.9087,
+        "mAP50_95": 0.554,
+        "precision": 0.9233,
+        "recall": 0.8383,
+        "segundos": 178.4
+      },
+      "veredicto": "ESCALA REFUTADA (mejor 768, +0% sobre 768)"
+    },
+    "lofo_armah": {
+      "barrido": [
+        {
+          "imgsz": 640,
+          "mAP50": 0.0848,
+          "mAP50_95": 0.0407,
+          "precision": 0.3499,
+          "recall": 0.0922,
+          "segundos": 2.7
+        },
+        {
+          "imgsz": 768,
+          "mAP50": 0.1724,
+          "mAP50_95": 0.0811,
+          "precision": 0.5513,
+          "recall": 0.1386,
+          "segundos": 3.1
+        },
+        {
+          "imgsz": 896,
+          "mAP50": 0.2573,
+          "mAP50_95": 0.121,
+          "precision": 0.67,
+          "recall": 0.2068,
+          "segundos": 3.7
+        },
+        {
+          "imgsz": 1024,
+          "mAP50": 0.2847,
+          "mAP50_95": 0.1364,
+          "precision": 0.7504,
+          "recall": 0.229,
+          "segundos": 4.3
+        },
+        {
+          "imgsz": 1152,
+          "mAP50": 0.2708,
+          "mAP50_95": 0.1286,
+          "precision": 0.7263,
+          "recall": 0.2195,
+          "segundos": 5.1
+        },
+        {
+          "imgsz": 1280,
+          "mAP50": 0.2694,
+          "mAP50_95": 0.1268,
+          "precision": 0.7535,
+          "recall": 0.2152,
+          "segundos": 5.9
+        },
+        {
+          "imgsz": 1536,
+          "mAP50": 0.247,
+          "mAP50_95": 0.1142,
+          "precision": 0.7511,
+          "recall": 0.1949,
+          "segundos": 8.0
+        },
+        {
+          "imgsz": 1920,
+          "mAP50": 0.2502,
+          "mAP50_95": 0.1135,
+          "precision": 0.6769,
+          "recall": 0.2083,
+          "segundos": 11.7
+        }
+      ],
+      "mejor": {
+        "imgsz": 1024,
+        "mAP50": 0.2847,
+        "mAP50_95": 0.1364,
+        "precision": 0.7504,
+        "recall": 0.229,
+        "segundos": 4.3
+      },
+      "base_768": {
+        "imgsz": 768,
+        "mAP50": 0.1724,
+        "mAP50_95": 0.0811,
+        "precision": 0.5513,
+        "recall": 0.1386,
+        "segundos": 3.1
+      },
+      "veredicto": "ESCALA CONFIRMADA: mejor imgsz 1024 da mAP50 0.2847 (+65%) y recall 0.2290 (+65%)"
+    },
+    "lofo_elliot": {
+      "barrido": [
+        {
+          "imgsz": 640,
+          "mAP50": 0.0066,
+          "mAP50_95": 0.0028,
+          "precision": 0.0225,
+          "recall": 0.061,
+          "segundos": 14.8
+        },
+        {
+          "imgsz": 768,
+          "mAP50": 0.0032,
+          "mAP50_95": 0.0016,
+          "precision": 0.0117,
+          "recall": 0.0724,
+          "segundos": 20.0
+        },
+        {
+          "imgsz": 896,
+          "mAP50": 0.0361,
+          "mAP50_95": 0.0147,
+          "precision": 0.143,
+          "recall": 0.0684,
+          "segundos": 26.7
+        },
+        {
+          "imgsz": 1024,
+          "mAP50": 0.137,
+          "mAP50_95": 0.0573,
+          "precision": 0.2958,
+          "recall": 0.1633,
+          "segundos": 33.7
+        },
+        {
+          "imgsz": 1152,
+          "mAP50": 0.2035,
+          "mAP50_95": 0.0828,
+          "precision": 0.3644,
+          "recall": 0.2187,
+          "segundos": 41.6
+        },
+        {
+          "imgsz": 1280,
+          "mAP50": 0.1717,
+          "mAP50_95": 0.0743,
+          "precision": 0.3286,
+          "recall": 0.204,
+          "segundos": 50.8
+        },
+        {
+          "imgsz": 1536,
+          "mAP50": 0.2162,
+          "mAP50_95": 0.0851,
+          "precision": 0.4065,
+          "recall": 0.2253,
+          "segundos": 71.3
+        }
+      ],
+      "mejor": {
+        "imgsz": 1536,
+        "mAP50": 0.2162,
+        "mAP50_95": 0.0851,
+        "precision": 0.4065,
+        "recall": 0.2253,
+        "segundos": 71.3
+      },
+      "base_768": {
+        "imgsz": 768,
+        "mAP50": 0.0032,
+        "mAP50_95": 0.0016,
+        "precision": 0.0117,
+        "recall": 0.0724,
+        "segundos": 20.0
+      },
+      "veredicto": "ESCALA CONFIRMADA: mejor imgsz 1536 da mAP50 0.2162 (+6656%) y recall 0.2253 (+211%)"
+    },
+    "lofo_lasuiza": {
+      "barrido": [
+        {
+          "imgsz": 640,
+          "mAP50": 0.1095,
+          "mAP50_95": 0.067,
+          "precision": 0.2411,
+          "recall": 0.1735,
+          "segundos": 6.3
+        },
+        {
+          "imgsz": 768,
+          "mAP50": 0.1573,
+          "mAP50_95": 0.0921,
+          "precision": 0.246,
+          "recall": 0.2623,
+          "segundos": 8.1
+        },
+        {
+          "imgsz": 896,
+          "mAP50": 0.294,
+          "mAP50_95": 0.1637,
+          "precision": 0.3793,
+          "recall": 0.4208,
+          "segundos": 10.5
+        },
+        {
+          "imgsz": 1024,
+          "mAP50": 0.4482,
+          "mAP50_95": 0.2386,
+          "precision": 0.5032,
+          "recall": 0.5423,
+          "segundos": 13.1
+        },
+        {
+          "imgsz": 1152,
+          "mAP50": 0.5338,
+          "mAP50_95": 0.2769,
+          "precision": 0.5471,
+          "recall": 0.6284,
+          "segundos": 16.1
+        },
+        {
+          "imgsz": 1280,
+          "mAP50": 0.5602,
+          "mAP50_95": 0.2727,
+          "precision": 0.5367,
+          "recall": 0.6967,
+          "segundos": 19.5
+        },
+        {
+          "imgsz": 1536,
+          "mAP50": 0.4804,
+          "mAP50_95": 0.2108,
+          "precision": 0.4438,
+          "recall": 0.7322,
+          "segundos": 27.7
+        }
+      ],
+      "mejor": {
+        "imgsz": 1280,
+        "mAP50": 0.5602,
+        "mAP50_95": 0.2727,
+        "precision": 0.5367,
+        "recall": 0.6967,
+        "segundos": 19.5
+      },
+      "base_768": {
+        "imgsz": 768,
+        "mAP50": 0.1573,
+        "mAP50_95": 0.0921,
+        "precision": 0.246,
+        "recall": 0.2623,
+        "segundos": 8.1
+      },
+      "veredicto": "ESCALA CONFIRMADA: mejor imgsz 1280 da mAP50 0.5602 (+256%) y recall 0.6967 (+166%)"
+    },
+    "lofo_m2": {
+      "barrido": [
+        {
+          "imgsz": 640,
+          "mAP50": 0.0,
+          "mAP50_95": 0.0,
+          "precision": 0.0032,
+          "recall": 0.0004,
+          "segundos": 7.6
+        },
+        {
+          "imgsz": 768,
+          "mAP50": 0.0,
+          "mAP50_95": 0.0,
+          "precision": 0.0011,
+          "recall": 0.0001,
+          "segundos": 9.9
+        },
+        {
+          "imgsz": 896,
+          "mAP50": 0.0,
+          "mAP50_95": 0.0,
+          "precision": 0.0035,
+          "recall": 0.0002,
+          "segundos": 13.0
+        },
+        {
+          "imgsz": 1024,
+          "mAP50": 0.0,
+          "mAP50_95": 0.0,
+          "precision": 0.004,
+          "recall": 0.0002,
+          "segundos": 16.5
+        },
+        {
+          "imgsz": 1152,
+          "mAP50": 0.0,
+          "mAP50_95": 0.0,
+          "precision": 0.0025,
+          "recall": 0.0001,
+          "segundos": 20.4
+        },
+        {
+          "imgsz": 1280,
+          "mAP50": 0.0,
+          "mAP50_95": 0.0,
+          "precision": 0.0019,
+          "recall": 0.0001,
+          "segundos": 24.9
+        },
+        {
+          "imgsz": 1536,
+          "mAP50": 0.0,
+          "mAP50_95": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "segundos": 35.1
+        }
+      ],
+      "mejor": {
+        "imgsz": 640,
+        "mAP50": 0.0,
+        "mAP50_95": 0.0,
+        "precision": 0.0032,
+        "recall": 0.0004,
+        "segundos": 7.6
+      },
+      "base_768": {
+        "imgsz": 768,
+        "mAP50": 0.0,
+        "mAP50_95": 0.0,
+        "precision": 0.0011,
+        "recall": 0.0001,
+        "segundos": 9.9
+      },
+      "veredicto": "sin base a 768"
+    },
+    "lofo_original": {
+      "barrido": [
+        {
+          "imgsz": 640,
+          "mAP50": 0.9528,
+          "mAP50_95": 0.636,
+          "precision": 0.8982,
+          "recall": 0.9145,
+          "segundos": 24.1
+        },
+        {
+          "imgsz": 768,
+          "mAP50": 0.9481,
+          "mAP50_95": 0.6252,
+          "precision": 0.9033,
+          "recall": 0.8972,
+          "segundos": 32.2
+        },
+        {
+          "imgsz": 896,
+          "mAP50": 0.9415,
+          "mAP50_95": 0.6057,
+          "precision": 0.8918,
+          "recall": 0.9011,
+          "segundos": 43.2
+        },
+        {
+          "imgsz": 1024,
+          "mAP50": 0.9325,
+          "mAP50_95": 0.5769,
+          "precision": 0.8741,
+          "recall": 0.8984,
+          "segundos": 55.7
+        },
+        {
+          "imgsz": 1152,
+          "mAP50": 0.9279,
+          "mAP50_95": 0.5447,
+          "precision": 0.8734,
+          "recall": 0.8926,
+          "segundos": 69.7
+        },
+        {
+          "imgsz": 1280,
+          "mAP50": 0.9088,
+          "mAP50_95": 0.5012,
+          "precision": 0.8584,
+          "recall": 0.8721,
+          "segundos": 85.9
+        },
+        {
+          "imgsz": 1536,
+          "mAP50": 0.8309,
+          "mAP50_95": 0.3735,
+          "precision": 0.7871,
+          "recall": 0.8107,
+          "segundos": 122.8
+        }
+      ],
+      "mejor": {
+        "imgsz": 640,
+        "mAP50": 0.9528,
+        "mAP50_95": 0.636,
+        "precision": 0.8982,
+        "recall": 0.9145,
+        "segundos": 24.1
+      },
+      "base_768": {
+        "imgsz": 768,
+        "mAP50": 0.9481,
+        "mAP50_95": 0.6252,
+        "precision": 0.9033,
+        "recall": 0.8972,
+        "segundos": 32.2
+      },
+      "veredicto": "ESCALA REFUTADA (mejor 640, +0% sobre 768)"
+    }
+  }
+}
