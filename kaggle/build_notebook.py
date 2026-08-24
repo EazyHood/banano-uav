@@ -217,7 +217,10 @@ for y in sorted(os.listdir(SPLITS)):
 # resoluciones. Sobre la finca ciega, pasar de 768 a 1024 subio el mAP50 un 65% y el
 # recall otro 65%. Aqui se repite sobre TODAS las fincas retenidas, porque elegir la
 # resolucion mirando una sola es afinar sobre el holdout.
-HACER_BARRIDO = True
+# Ya medido el 2026-08-24 sobre las 6 fincas y guardado en real_eval/scale_sweep_lofo_v10.json.
+# Costo ~50 min de la sesion (lofo_agromatica sola son 4.137 imagenes de validacion x 7
+# resoluciones). Ponlo en True solo cuando cambien los pesos o las fincas.
+HACER_BARRIDO = False
 
 if HACER_BARRIDO:
     subprocess.run([sys.executable, f"{SRC}/cloud/scale_sweep.py",
