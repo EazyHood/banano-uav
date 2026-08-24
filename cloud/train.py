@@ -77,14 +77,15 @@ RECETAS: dict[str, dict[str, Any]] = {
             "el tamaño de la planta (mediana de 15,6 px a 175,3 px a imgsz 768). `scale` "
             "admite TUPLA (min,max) como factores absolutos —augment.py:1085-1134—, así que "
             "(0.25, 2.5) cubre 10x, justo la dispersión real. `scale` como float sólo daba "
-            "0.4x-1.6x. multi_scale mueve además la resolución de entrada entre lotes. "
-            "NO se usa copy_paste: en ultralytics 8.4.117 es exclusivo de segmentación "
-            "(default.yaml:131) y aquí las etiquetas son cajas, así que no haría nada."
+            "0.4x-1.6x. `multi_scale` mueve además la resolución de entrada entre lotes: es "
+            "una FRACCIÓN de imgsz (default.yaml:40), NO un booleano — con 0.25 los lotes van "
+            "de 0.75x a 1.25x. NO se usa copy_paste: en ultralytics 8.4.117 es exclusivo de "
+            "segmentación (default.yaml:131) y aquí las etiquetas son cajas."
         ),
         "degrees": 180.0,
         "flipud": 0.5,
         "scale": (0.25, 2.5),
-        "multi_scale": True,
+        "multi_scale": 0.25,
         "hsv_h": 0.02,
         "hsv_s": 0.8,
         "hsv_v": 0.5,
@@ -158,6 +159,18 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
         print(f"  reanudando desde {ultimo}")
 
     hiper = {k: v for k, v in receta.items() if not k.startswith("_")}
+
+    # multi_scale es una FRACCION de imgsz, no un interruptor. Poner True lo convierte en 1.0
+    # y los lotes se sortean entre 32 px y 2*imgsz: a imgsz 1024 eso son lotes de 2048 px con
+    # 4x las activaciones, y un CUDA out of memory en una epoca cualquiera. Peor aun, la
+    # reduccion automatica de batch de ultralytics solo actua en la PRIMERA epoca y en una
+    # sola GPU (trainer.py:522), asi que a partir de ahi no hay red y la sesion muere.
+    if isinstance(hiper.get("multi_scale"), bool):
+        raise ValueError(
+            "multi_scale es una fraccion de imgsz (0.25 = +/-25%), no un booleano. "
+            "Con True se interpreta como 1.0 y sortea lotes de hasta 2*imgsz."
+        )
+
     if args.horas:
         # `time` de ultralytics manda sobre `epochs` y lo comprueba al final de cada epoca
         # (engine/trainer.py:547). Es la forma honesta de encajar en una sesion con limite:

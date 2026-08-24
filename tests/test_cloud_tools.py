@@ -485,3 +485,44 @@ def test_el_resumen_del_barrido_destapa_la_media_arrastrada_por_una_finca():
     # y el rango lo deja ver a simple vista
     assert r[768]["mAP50_min"] == 0.20 and r[768]["mAP50_max"] == 0.95
     assert r[1024]["mAP50_max"] - r[1024]["mAP50_min"] < 0.25
+
+
+def test_multi_scale_es_una_fraccion_y_no_un_interruptor():
+    # En ultralytics >= 8.4, multi_scale es una FRACCION de imgsz (cfg/default.yaml:40), no un
+    # booleano. Con True se interpreta como 1.0 y detect/train.py:120-129 sortea el tamano del
+    # lote en randrange(32, 2*imgsz+32): a imgsz 1024 salen lotes de hasta 2048 px, o sea 4x
+    # las activaciones, y el CUDA out of memory llega en una epoca cualquiera. Y ahi no hay
+    # red: la reduccion automatica de batch solo actua en la primera epoca y en una sola GPU
+    # (trainer.py:522). Encontrado por revision adversarial el 2026-08-24, ya estaba lanzado.
+    import argparse
+
+    from cloud.train import RECETAS, entrena
+
+    for nombre, receta in RECETAS.items():
+        ms = receta.get("multi_scale")
+        assert not isinstance(ms, bool), f"receta '{nombre}': multi_scale={ms!r} es booleano"
+        if ms is not None:
+            assert 0.0 < ms <= 0.5, f"receta '{nombre}': multi_scale={ms} fuera de rango sensato"
+
+    # y la guarda salta si alguien lo vuelve a poner
+    args = argparse.Namespace(
+        batch=None, workers=None, receta="x", modelo="m.pt", imgsz=640, proyecto="/tmp/p",
+        desde_cero=True, horas=None, epochs=1, patience=1, semilla=0, nombre="n", max_det=100,
+    )
+    try:
+        entrena(args, pathlib.Path("no_existe.yaml"), {"multi_scale": True}, {"cuda": False, "so": "Linux"})
+    except ValueError as e:
+        assert "fraccion" in str(e)
+    else:
+        raise AssertionError("la guarda de multi_scale no salto")
+
+
+def test_los_lotes_no_pueden_pasar_de_1_5x_las_activaciones_nominales():
+    # Traduccion del limite a lo que de verdad importa: cuanta memoria puede pedir el peor
+    # lote frente al nominal. 4x no cabe en una T4; 1.56x si.
+    from cloud.train import RECETAS
+
+    ms = RECETAS["escala"]["multi_scale"]
+    imgsz, stride = 1024, 32
+    mayor = (int(imgsz * (1.0 + ms) + stride) - 1) // stride * stride
+    assert (mayor / imgsz) ** 2 <= 1.6, f"el peor lote pide {(mayor/imgsz)**2:.2f}x"
