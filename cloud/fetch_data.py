@@ -46,21 +46,52 @@ ESPERA_S = 5
 ESPERA_GEN_S = 15  # generar el zip la primera vez tarda mas que un fallo de red
 
 
+def _valida(key: str) -> str:
+    """Una clave con espacios o saltos de linea no vale, y ademas es peligrosa.
+
+    urllib se niega a construir la URL y en la excepcion incluye la URL entera, clave dentro.
+    Mejor rechazarla aqui, con un mensaje que no la enseñe.
+    """
+    if not key or not key.isascii() or not key.replace("_", "").replace("-", "").isalnum():
+        raise SystemExit(
+            "La API key de Roboflow tiene caracteres raros (espacios, saltos de linea o "
+            f"simbolos). Longitud leida: {len(key)}. Debe ser alfanumerica, sin espacios."
+        )
+    return key
+
+
+def sin_clave(texto: str, key: str) -> str:
+    """Quita la API key de cualquier texto antes de imprimirlo.
+
+    La clave viaja en la URL (?api_key=...), que es como la espera Roboflow. Si la peticion
+    falla, urllib mete la URL ENTERA en el mensaje de la excepcion, y ese mensaje acaba en
+    stdout y de ahi al log de Kaggle, que cualquiera con el enlace puede descargar. Medido:
+    con una clave que lleve un espacio, urllib lanza
+      "URL can't contain control characters. '/w/p/1/yolov8?api_key=<LA CLAVE>'"
+    Asi que nada que pueda contener la clave se imprime sin pasar por aqui.
+    """
+    if not key:
+        return texto
+    limpio = texto.replace(key, "<CLAVE>")
+    # y por si acaso, cualquier api_key= que quedara suelto
+    return re.sub(r"api_key=[^&\s'\"]+", "api_key=<CLAVE>", limpio)
+
+
 def lee_key() -> str:
     k = os.environ.get("ROBOFLOW_API_KEY", "").strip()
     if k:
-        return k
+        return _valida(k)
     try:  # Kaggle: el secreto se declara en "Add-ons > Secrets"
         from kaggle_secrets import UserSecretsClient  # type: ignore[import-not-found]
 
         k = UserSecretsClient().get_secret("ROBOFLOW_API_KEY").strip()
         if k:
-            return k
+            return _valida(k)
     except Exception:
         pass
     fichero = Path.home() / ".roboflow_key"
     if fichero.exists():
-        return fichero.read_text(encoding="utf-8").strip()
+        return _valida(fichero.read_text(encoding="utf-8").strip())
     raise SystemExit(
         "No hay API key de Roboflow. Define ROBOFLOW_API_KEY, o crea el secreto del "
         "mismo nombre en Kaggle, o escribe la clave en ~/.roboflow_key"
@@ -107,7 +138,9 @@ def _pide_enlace(fuente: dict[str, Any], key: str) -> tuple[str, float]:
         except Exception as e:  # red inestable
             ultimo = e
             time.sleep(ESPERA_S * (intento + 1))
-    raise RuntimeError(f"no se pudo obtener el enlace de {fuente['carpeta']}: {ultimo}")
+    raise RuntimeError(
+        f"no se pudo obtener el enlace de {fuente['carpeta']}: {sin_clave(str(ultimo), key)}"
+    )
 
 
 # Roboflow exporta con augmentacion: el mismo original aparece varias veces, renombrado
@@ -297,7 +330,7 @@ def main() -> int:
                 raise
             except Exception as e:
                 malas += 1
-                print(f"FALLA: {type(e).__name__}: {str(e)[:70]}")
+                print(f"FALLA: {type(e).__name__}: {sin_clave(str(e), key)[:90]}")
         print()
         print(f"{len(fuentes) - malas}/{len(fuentes)} disponibles")
         return 1 if malas else 0
@@ -313,7 +346,7 @@ def main() -> int:
             raise
         except Exception as e:
             fallos += 1
-            print(f"FALLO: {e}")
+            print(f"FALLO: {sin_clave(str(e), key)}")
 
     print(f"\nListo. {len(fuentes) - fallos}/{len(fuentes)} fuentes disponibles en {args.destino}")
     for aviso in manifiesto.get("avisos", []):

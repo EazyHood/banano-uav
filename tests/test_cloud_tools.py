@@ -526,3 +526,47 @@ def test_los_lotes_no_pueden_pasar_de_1_5x_las_activaciones_nominales():
     imgsz, stride = 1024, 32
     mayor = (int(imgsz * (1.0 + ms) + stride) - 1) // stride * stride
     assert (mayor / imgsz) ** 2 <= 1.6, f"el peor lote pide {(mayor/imgsz)**2:.2f}x"
+
+
+# ------------------------------------------------------------------- credenciales
+
+
+def test_la_clave_de_roboflow_no_puede_acabar_en_un_log():
+    # La clave viaja en la URL (?api_key=...), que es como la espera Roboflow. Si la peticion
+    # falla, urllib mete la URL ENTERA en el mensaje de la excepcion, y ese mensaje se imprime
+    # a stdout y de ahi al log de Kaggle, que se descarga con `kernels logs`. Medido el
+    # 2026-08-24: con una clave que lleve un espacio, urllib lanza
+    #   "URL can't contain control characters. '/w/p/1/yolov8?api_key=<LA CLAVE>'"
+    from cloud.fetch_data import sin_clave
+
+    msg = "URL can't contain control characters. '/w/p/1/yolov8?api_key=SECRETO123'"
+
+    # con la clave conocida, desaparece
+    limpio = sin_clave(msg, "SECRETO123")
+    assert "SECRETO123" not in limpio
+    assert "<CLAVE>" in limpio
+
+    # y aunque no sepamos cual era, el patron api_key= se tapa igual
+    ciego = sin_clave(msg, "una-clave-distinta")
+    assert "SECRETO123" not in ciego
+
+
+def test_una_clave_con_caracteres_raros_se_rechaza_antes_de_usarla():
+    # Es la que provoca que urllib exponga la URL. Mejor pararla al leerla, y con un mensaje
+    # que diga la longitud pero NO la clave.
+    from cloud.fetch_data import _valida
+
+    assert _valida("VRcC0d7LUJUuNGXOk9wW") == "VRcC0d7LUJUuNGXOk9wW"
+    assert _valida("con-guiones_y_bajos") == "con-guiones_y_bajos"
+
+    for mala in ("clave con espacio", "clave\ncon salto", "clave\tcon tab", ""):
+        try:
+            _valida(mala)
+        except SystemExit as e:
+            # el mensaje dice la longitud, pero nunca la clave. Ojo: para la cadena
+            # vacia, `"" in cualquier_cosa` es siempre cierto y el assert no medía nada.
+            if mala.strip():
+                assert mala.strip() not in str(e)
+            assert "Longitud leida" in str(e)
+        else:
+            raise AssertionError(f"deberia haber rechazado {mala!r}")
