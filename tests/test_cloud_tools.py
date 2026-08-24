@@ -361,7 +361,13 @@ def test_el_notebook_de_kaggle_es_python_valido_y_lleva_sus_guardas():
 
     # 5. Un HTTP 400 al pedir el secreto significa "no existe", no un fallo de red: el
     #    cliente de Kaggle lo envuelve en "Connection error" y despista.
-    assert "no esta definido en este notebook" in todo
+    assert "No hay clave de Roboflow" in todo
+
+    # 6. La clave tiene DOS vias y basta con una: el dataset privado adjunto (la unica
+    #    montable desde la terminal, porque el CLI no tiene comando de secrets) y el
+    #    Secret de siempre. Si alguien quita la primera, esto vuelve a exigir un clic.
+    assert "/kaggle/input/*/roboflow.json" in todo
+    assert "UserSecretsClient" in todo
 
     # y el limite de tiempo se presupuesta por debajo de las 12 h de Kaggle
     assert "LIMITE_H = 11.0" in todo
