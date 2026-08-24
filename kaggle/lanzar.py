@@ -99,6 +99,7 @@ def main() -> int:
     ap.add_argument("--usuario", help="tu usuario de Kaggle, si no se detecta solo")
     ap.add_argument("--estado", action="store_true", help="consulta cómo va la corrida")
     ap.add_argument("--recoger", action="store_true", help="descarga la salida (pesos y métricas)")
+    ap.add_argument("--log", action="store_true", help="enseña el log de la corrida (sin descargar la salida)")
     ap.add_argument("--destino", type=Path, default=AQUI.parent / "runs_cloud" / "kaggle")
     args = ap.parse_args()
 
@@ -110,6 +111,27 @@ def main() -> int:
         r = subprocess.run([k, "kernels", "status", kid], capture_output=True, text=True)
         print((r.stdout + r.stderr).strip())
         return r.returncode
+
+    if args.log:
+        # `kernels logs` trae solo el log; `kernels output` se baja TODA la salida, que en
+        # una corrida fallida puede ser el repo clonado entero. Diagnosticar no debe costar
+        # 161 MB, que es lo que costo la primera vez.
+        r = subprocess.run([k, "kernels", "logs", kid], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace")
+        if r.returncode != 0:
+            print((r.stdout + r.stderr).strip())
+            return r.returncode
+        try:
+            eventos = json.loads(r.stdout)
+        except json.JSONDecodeError:
+            print(r.stdout)
+            return 0
+        for e in eventos:
+            texto = (e.get("data") or "").rstrip()
+            if texto:
+                marca = "!" if e.get("stream_name") == "stderr" else " "
+                print(f"{marca} {texto}")
+        return 0
 
     if args.recoger:
         args.destino.mkdir(parents=True, exist_ok=True)

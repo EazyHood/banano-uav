@@ -352,7 +352,16 @@ def test_el_notebook_de_kaggle_es_python_valido_y_lleva_sus_guardas():
     assert "gethostbyname" in todo
 
     # 3. Sin GPU hay que abortar, no seguir: 12 h de sesion tiradas.
-    assert "raise SystemExit" in celdas[1]
+    assert "raise RuntimeError" in celdas[1]
+
+    # 4. NUNCA SystemExit en una celda: revienta el formateador de traceback de IPython
+    #    ("TypeError: object of type 'NoneType' has no len()") y tapa el mensaje que
+    #    explica que hacer. Medido en la corrida del 2026-08-24.
+    assert "raise SystemExit" not in todo
+
+    # 5. Un HTTP 400 al pedir el secreto significa "no existe", no un fallo de red: el
+    #    cliente de Kaggle lo envuelve en "Connection error" y despista.
+    assert "no esta definido en este notebook" in todo
 
     # y el limite de tiempo se presupuesta por debajo de las 12 h de Kaggle
     assert "LIMITE_H = 11.0" in todo

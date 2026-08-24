@@ -54,7 +54,7 @@ if torch.cuda.is_available():
         print(f"  GPU {i}: {p.name}  {p.total_memory/1024**3:.1f} GB  sm_{p.major}{p.minor}")
     nombre = torch.cuda.get_device_name(0)
     if "P100" in nombre:
-        raise SystemExit(
+        raise RuntimeError(
             "GPU P100 detectada. La imagen de Kaggle no trae kernels de Pascal y el "
             "entrenamiento moriria en el primer lote. Cambia el acelerador a 'GPU T4 x2'."
         )
@@ -76,7 +76,7 @@ print("internet:", "OK" if hay_red else "NO")
 # ejecucion si la cuenta no tiene el telefono verificado. Sin este aviso el sintoma
 # que ves es un error de git ("Could not resolve host") que no dice nada del motivo.
 if not torch.cuda.is_available() or not hay_red:
-    raise SystemExit(chr(10).join([
+    raise RuntimeError(chr(10).join([
         "=" * 70,
         "Este notebook pidio GPU e Internet y Kaggle no los ha concedido.",
         "",
@@ -133,10 +133,27 @@ try:
     os.environ["ROBOFLOW_API_KEY"] = UserSecretsClient().get_secret("ROBOFLOW_API_KEY").strip()
     print("clave leida del secreto de Kaggle")
 except Exception as e:
-    raise SystemExit(
-        f"No se pudo leer el secreto ROBOFLOW_API_KEY ({e}). "
-        "Add-ons -> Secrets -> Add a new secret, etiqueta exacta ROBOFLOW_API_KEY."
-    )""",
+    # Kaggle responde HTTP 400 cuando el secreto NO EXISTE, y el cliente lo envuelve en un
+    # "Connection error trying to communicate with service", que suena a fallo de red y no
+    # lo es. Se traduce aqui para no mandar a nadie a mirar la conexion.
+    detalle = str(e)
+    falta = "400" in detalle or "Connection error" in detalle
+    # RuntimeError y no SystemExit: SystemExit revienta el formateador de traceback de
+    # IPython (TypeError: object of type NoneType has no len()) y tapa este mensaje.
+    raise RuntimeError(chr(10).join([
+        "=" * 70,
+        ("El secreto ROBOFLOW_API_KEY no esta definido en este notebook."
+         if falta else "No se pudo leer el secreto ROBOFLOW_API_KEY: " + detalle),
+        "",
+        "Se anade una sola vez, desde la web del notebook:",
+        "  Add-ons -> Secrets -> Add a new secret",
+        "  Label: ROBOFLOW_API_KEY   (exacto, en mayusculas)",
+        "  Value: tu Private API Key de https://app.roboflow.com/settings/api",
+        "         (la que NO empieza por rf_)",
+        "",
+        "Y deja marcada la casilla que se lo adjunta a este notebook.",
+        "=" * 70,
+    ])) from None""",
     ),
     (
         "code",
