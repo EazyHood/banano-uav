@@ -14,10 +14,12 @@ REQUISITOS, una sola vez:
      a Internet del notebook quedan bloqueados, y el entrenamiento no puede ni descargar
      los datos. No pide tarjeta.
   2. pip install kaggle    (el paquete exige Python >= 3.11)
-  3. Un token: https://www.kaggle.com/settings/api -> "Generate New Token".
-     Vale cualquiera de estas vías: `kaggle auth login`, la variable de entorno
-     KAGGLE_API_TOKEN, el fichero ~/.kaggle/access_token, o el kaggle.json de siempre
-     en ~/.kaggle/kaggle.json.
+  3. Un token: https://www.kaggle.com/settings/api -> "Generate New Token". Ese boton da
+     hoy un token suelto que empieza por KGAT_, NO un fichero. Guardalo en texto plano en
+     ~/.kaggle/access_token (o en la variable KAGGLE_API_TOKEN, o usa `kaggle auth login`).
+     OJO: no sirve meterlo en ~/.kaggle/kaggle.json — ese es el formato antiguo y espera un
+     JSON con username y key; con el token pelado dentro el CLI falla sin explicar por que.
+     El boton "Create Legacy API Key" es el que genera un kaggle.json de verdad.
   4. El secreto ROBOFLOW_API_KEY dentro del notebook (Add-ons -> Secrets). Esto SÍ hay
      que hacerlo por web una vez: la API de Kaggle todavía no permite adjuntar secretos
      al empujar un kernel (issue Kaggle/kaggle-api#582, abierta).

@@ -312,3 +312,55 @@ def test_la_verdad_de_terreno_acepta_cajas_y_poligonos(tmp_path):
     # y leerlo como si fuera una caja habria dado algo muy distinto: con p[1:5] el
     # centro seria (0.4, 0.4) y el tamano (0.6, 0.4) -> x de 10 a 70, no de 40 a 60
     assert not np.allclose(poli[0], [10.0, 20.0, 70.0, 60.0])
+
+
+# ------------------------------------------------------------------ notebook Kaggle
+
+
+def _notebook():
+    import ast
+    import json as _json
+
+    nb = _json.loads(
+        (pathlib.Path(RAIZ) / "kaggle" / "entrenar" / "banano-entrenar.ipynb").read_text(
+            encoding="utf-8"
+        )
+    )
+    celdas = []
+    for c in nb["cells"]:
+        src = "".join(c["source"])
+        if c["cell_type"] == "code":
+            ast.parse(src)  # que sea Python valido no es negociable: corre desatendido
+        celdas.append(src)
+    return celdas
+
+
+def test_el_notebook_de_kaggle_es_python_valido_y_lleva_sus_guardas():
+    # Corre desatendido en una maquina que no vemos: un fallo tonto ahi cuesta una
+    # sesion entera. Las tres guardas salen de fallos reales, no de precaucion abstracta.
+    celdas = _notebook()
+    todo = "\n".join(celdas)
+
+    # 1. P100: la imagen de Kaggle no trae kernels de Pascal, is_available() dice True
+    #    y el entreno muere en el primer lote.
+    assert "P100" in todo
+
+    # 2. Kaggle ACEPTA enable_gpu/enable_internet y luego los DENIEGA si la cuenta no
+    #    tiene el telefono verificado. Pasado por alto, el sintoma es un error de git
+    #    que no menciona el motivo. Medido el 2026-08-24 en una corrida real.
+    assert "Phone verification" in todo
+    assert "gethostbyname" in todo
+
+    # 3. Sin GPU hay que abortar, no seguir: 12 h de sesion tiradas.
+    assert "raise SystemExit" in celdas[1]
+
+    # y el limite de tiempo se presupuesta por debajo de las 12 h de Kaggle
+    assert "LIMITE_H = 11.0" in todo
+
+
+def test_el_notebook_no_deja_los_datos_en_la_salida_autoguardada():
+    # /kaggle/working se guarda entero al terminar y tiene 20 GB: las imagenes van al
+    # scratch, no ahi. Si alguien cambia esto, la corrida muere al subir la salida.
+    celdas = _notebook()
+    todo = "\n".join(celdas)
+    assert 'DATOS = "/kaggle/temp/realdata"' in todo

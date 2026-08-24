@@ -61,8 +61,36 @@ if torch.cuda.is_available():
     # Prueba real: is_available() puede mentir, una operacion CUDA no.
     torch.zeros(8, device="cuda").sum().item()
     print("  operacion CUDA de prueba: OK")
-else:
-    print("AVISO: sin GPU. Activa el acelerador o esto tardara dias.")""",
+
+# Internet: sin el, ni se clona el repo ni se bajan las fotos.
+import socket
+try:
+    socket.setdefaulttimeout(10)
+    socket.gethostbyname("github.com")
+    hay_red = True
+except OSError:
+    hay_red = False
+print("internet:", "OK" if hay_red else "NO")
+
+# Kaggle ACEPTA enable_gpu/enable_internet en el metadata y luego los DENIEGA en
+# ejecucion si la cuenta no tiene el telefono verificado. Sin este aviso el sintoma
+# que ves es un error de git ("Could not resolve host") que no dice nada del motivo.
+if not torch.cuda.is_available() or not hay_red:
+    raise SystemExit(chr(10).join([
+        "=" * 70,
+        "Este notebook pidio GPU e Internet y Kaggle no los ha concedido.",
+        "",
+        "Causa casi segura: falta la VERIFICACION POR TELEFONO de la cuenta.",
+        "Es lo unico que Kaggle exige para desbloquear las dos cosas a la vez,",
+        "y es un SMS: no pide tarjeta.",
+        "",
+        "    https://www.kaggle.com/settings  ->  Phone verification",
+        "",
+        "Despues vuelve a lanzarlo. Se aborta aqui a proposito: seguir sin GPU",
+        "gastaria las 12 h de sesion para nada.",
+        "=" * 70,
+    ]))
+""",
     ),
     (
         "code",

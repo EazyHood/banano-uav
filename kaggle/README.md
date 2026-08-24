@@ -23,11 +23,18 @@ esta verificación el notebook no puede usar GPU ni salir a Internet, así que n
 descargar los datos.
 
 **2. Token de la API.**
-En <https://www.kaggle.com/settings/api> → *Generate New Token*. Guarda el fichero en:
+En <https://www.kaggle.com/settings/api> → *Generate New Token*. Hoy ese botón te da un token
+suelto que empieza por `KGAT_`, **no** un fichero. Va aquí, en un fichero de texto plano con el
+token y nada más:
 
 ```
-C:\Users\jhona\.kaggle\kaggle.json
+C:\Users\jhona\.kaggle\access_token
 ```
+
+> ⚠️ **No lo metas en `kaggle.json`.** Ese fichero es del formato antiguo y espera un JSON
+> (`{"username": "...", "key": "..."}`); si le pones el token pelado, el CLI no lo puede leer y
+> falla sin decir por qué. El botón *Create Legacy API Key* de la misma página sí genera el
+> `kaggle.json` de verdad, si prefieres esa vía.
 
 **3. El paquete de línea de comandos** (ya está instalado en el venv del proyecto; si lo
 necesitas fuera):
