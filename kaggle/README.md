@@ -53,12 +53,29 @@ python kaggle/lanzar.py
 
 Sube el notebook y arranca la corrida. A partir de ahí puedes apagar el ordenador.
 
-> **La primera vez, y sólo la primera**, abre el notebook en la web y añade el secreto con
-> tu clave de Roboflow: menú `Add-ons → Secrets → Add a new secret`, con la etiqueta exacta
-> `ROBOFLOW_API_KEY` y como valor tu *Private API Key* de
-> <https://app.roboflow.com/settings/api> (la que **no** empieza por `rf_`).
-> Hay que hacerlo por web porque la API de Kaggle todavía no permite enganchar secretos al
-> subir un notebook — es la incidencia `Kaggle/kaggle-api#582`, que sigue abierta.
+> **La clave de Roboflow ya está resuelta** y no hay que tocar la web. Vive en un **dataset
+> privado** de tu cuenta, `jhonatandelriomejia/banano-uav-credenciales`, que el notebook lleva
+> adjunto y lee al arrancar. Es el rodeo que documenta el propio Kaggle, y es el único que se
+> puede montar entero desde la terminal: el CLI **no tiene ningún comando de secrets**
+> (incidencia `Kaggle/kaggle-api#582`, abierta).
+>
+> Si algún día prefieres el mecanismo oficial, sigue funcionando como alternativa: en el
+> notebook, `Add-ons → Secrets → Add a new secret`, etiqueta exacta `ROBOFLOW_API_KEY` y de
+> valor tu *Private API Key* de <https://app.roboflow.com/settings/api> (la que **no** empieza
+> por `rf_`). El notebook prueba primero el dataset y luego el secreto: basta con uno.
+>
+> 🔐 Ese dataset es privado, pero guarda una credencial: **no lo hagas público nunca**, y si
+> abandonas el proyecto bórralo con
+> `kaggle datasets delete jhonatandelriomejia/banano-uav-credenciales`.
+
+## Ver el log de una corrida
+
+```bash
+python kaggle/lanzar.py --log
+```
+
+Usa `kernels logs`, que trae sólo el log. **No uses `--recoger` para diagnosticar**: eso se
+baja la salida entera, que en una corrida fallida puede ser cientos de megas.
 
 ## Ver cómo va
 
