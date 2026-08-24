@@ -408,3 +408,53 @@ def test_el_manifiesto_de_fincas_nuevas_esta_medido_no_copiado():
         # si tiene mas de una clase, la nota tiene que avisar: hay que remapear
         if len(f["clases"]) > 1:
             assert "remapear" in f["notas"], f["carpeta"]
+
+
+# --------------------------------------------------------------------- portabilidad
+
+
+def test_ningun_script_codifica_el_interprete_de_windows():
+    # deep/eval_v12_suite.py hacia `PY = ROOT / ".venv" / "Scripts" / "python.exe"`, que en
+    # Linux no existe: la suite entera moria en la primera linea al correrla en la nube.
+    # Lo correcto es sys.executable, que ademas usa el mismo entorno que lanzo el proceso.
+    #
+    # Se mira el AST y no el texto: en los docstrings de "Uso:" si vale poner el comando de
+    # Windows como ejemplo para quien trabaje aqui. Lo que no puede haber es un literal asi
+    # dentro del CODIGO, que es lo que rompe fuera de Windows.
+    import ast
+
+    raiz = pathlib.Path(RAIZ)
+    malos = []
+    for py in sorted(
+        list(raiz.glob("deep/*.py")) + list(raiz.glob("cloud/*.py")) + list(raiz.glob("kaggle/*.py"))
+    ):
+        arbol = ast.parse(py.read_text(encoding="utf-8", errors="replace"))
+        docs = set()
+        for nodo in ast.walk(arbol):
+            es_contenedor = isinstance(
+                nodo, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            )
+            if es_contenedor and ast.get_docstring(nodo, clean=False) is not None:
+                docs.add(id(nodo.body[0].value))
+        for nodo in ast.walk(arbol):
+            if not isinstance(nodo, ast.Constant) or not isinstance(nodo.value, str):
+                continue
+            if id(nodo) in docs:
+                continue
+            v = nodo.value
+            if "python.exe" in v or v == "Scripts":
+                malos.append(f"{py.name}:{nodo.lineno}  ->  {v!r}")
+    assert not malos, "codifican el interprete de Windows en CODIGO: " + "; ".join(malos)
+
+
+def test_los_splits_que_se_versionan_no_llevan_rutas_de_una_maquina():
+    # realdata/*.yaml lleva rutas absolutas de Windows, pero esa carpeta esta en .gitignore
+    # y no viaja. Los que SI se publican son splits/, y esos tienen que resolver en cualquier
+    # maquina o el entrenamiento en la nube no arranca.
+    raiz = pathlib.Path(RAIZ) / "splits"
+    if not raiz.exists():
+        return
+    for y in raiz.glob("*.yaml"):
+        texto = y.read_text(encoding="utf-8")
+        assert "C:/Users" not in texto and ("C:" + chr(92) + "Users") not in texto, y.name
+        assert "/home/" not in texto, y.name

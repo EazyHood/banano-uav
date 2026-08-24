@@ -14,9 +14,11 @@ Además del mAP mide el ERROR DE CONTEO con barrido de confianza, que es lo que 
 verdad le importa a una finca, y compara contra los baselines de v10 ya registrados.
 
 Uso:
-  .venv\Scripts\python.exe deep\eval_v12_suite.py
-  .venv\Scripts\python.exe deep\eval_v12_suite.py --weights runs12/.../last.pt --tag v12b
-  .venv\Scripts\python.exe deep\eval_v12_suite.py --batch 2   # GPU con poca VRAM libre
+  python deep/eval_v12_suite.py
+  python deep/eval_v12_suite.py --weights runs12/.../last.pt --tag v12b
+  python deep/eval_v12_suite.py --batch 2   # GPU con poca VRAM libre
+
+En Windows, con el venv del proyecto: .venv\Scripts\python.exe deep\eval_v12_suite.py
 """
 
 from __future__ import annotations
@@ -28,11 +30,20 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PY = ROOT / ".venv" / "Scripts" / "python.exe"
+# sys.executable, no una ruta fija: `.venv/Scripts/python.exe` sólo existe en Windows, así
+# que la suite entera moria en la primera linea al correrla en la nube (Linux la pone en
+# `.venv/bin/python`). Y ademas usa el MISMO interprete que lanzo esta suite, que es lo
+# correcto: si alguien la ejecuta desde otro entorno, los subprocesos van a ese entorno.
+PY = Path(sys.executable)
 V10 = ROOT / "runs10" / "banana_v10_multifarm" / "weights" / "best.pt"
 V12 = ROOT / "runs12" / "banana_v12_26m" / "weights" / "best.pt"
 
 # (clave del protocolo, data.yaml, baseline de v10 ya registrado en real_eval/)
+#
+# OJO con `seenfarms`: su holdout.yaml valida en parte con extra/prueba2rgb, que resulto ser
+# byte a byte el mismo dataset que extra/etiquetasnuevas, presente en el train. El 100% de sus
+# 25 imagenes estaban vistas (25 de las 99 del protocolo). Ver deep/leak_audit.py y
+# docs/escala-y-fugas.md. Los otros tres protocolos dan 0% de fuga.
 PROTOCOLOS = [
     ("samefarm", "realdata/t768.yaml", None),
     ("seenfarms", "realdata/holdout.yaml", "v10_holdout_seenfarms"),
