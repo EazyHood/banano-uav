@@ -364,3 +364,32 @@ def test_el_notebook_no_deja_los_datos_en_la_salida_autoguardada():
     celdas = _notebook()
     todo = "\n".join(celdas)
     assert 'DATOS = "/kaggle/temp/realdata"' in todo
+
+
+def test_el_manifiesto_de_fincas_nuevas_esta_medido_no_copiado():
+    # La primera version de este fichero venia de un informe y traia tres errores que el
+    # control --comprobar encontro: un dataset de "preentreno de palma" que resultaron ser
+    # 1.021 imagenes con clases half/raw en vez de 24.985 con coronas de palma, una fuente
+    # cuya unica version no se puede exportar, y los recuentos de imagenes tomados del
+    # proyecto en vez de la version augmentada.
+    import json as _json
+
+    m = _json.loads(
+        (pathlib.Path(RAIZ) / "cloud" / "nuevas_fincas.json").read_text(encoding="utf-8")
+    )
+    todas = m["fuentes"] + m["preentreno_analogo"]
+
+    # lo que se elimino no puede volver por la puerta de atras
+    carpetas = {f["carpeta"] for f in todas}
+    assert "preentreno/palma" not in carpetas
+    assert "nuevas/qpl6j" not in carpetas
+    assert m["correcciones_del_control"], "las correcciones se documentan, no se borran"
+
+    # y cada fuente que quede tiene que traer lo que hace falta para usarla sin sorpresas
+    for f in todas:
+        assert f["licencia"] == "CC BY 4.0", f["carpeta"]
+        assert f["descarga_verificada_mb"] > 0, f["carpeta"]
+        assert f["clases"], f["carpeta"]
+        # si tiene mas de una clase, la nota tiene que avisar: hay que remapear
+        if len(f["clases"]) > 1:
+            assert "remapear" in f["notas"], f["carpeta"]

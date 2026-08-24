@@ -1,6 +1,6 @@
 {
-  "nota": "Fincas de banano/plátano NUEVAS y análogos de preentreno, encontrados y verificados el 2026-08-23. Ninguna está en realdata/ todavía. Cada descarga se comprobó de verdad (HTTP 200 + tamaño real) y cada candidata se cruzó con el corpus local por hash perceptual para descartar que fuese un fork de count_banana_plants, que es como se colaron los falsos positivos del inventario de julio. Se descargan EN LA NUBE con cloud/fetch_data.py --nuevas; el PC del autor no sube nada.",
-  "fecha": "2026-08-23",
+  "nota": "Fincas de banano/platano NUEVAS y analogos de preentreno. TODAS las cifras de aqui estan medidas contra la API de Roboflow el 2026-08-24 con cloud/fetch_data.py --comprobar, no copiadas de un informe: la primera version de este fichero traia tres errores que ese control encontro (ver 'correcciones_del_control'). Se descargan EN LA NUBE con cloud/fetch_data.py --nuevas; el PC del autor no sube nada.",
+  "fecha": "2026-08-24",
   "por_que_importan": "El entrenamiento actual tiene 3 fuentes realmente independientes, no 5: los tres proyectos de agromatica2025 son un mismo operador a tres altitudes, y prueba2rgb es una copia byte a byte de etiquetasnuevas. Con tan pocos orígenes, el modelo aprende el aspecto de esas fincas, no el de una planta de banano. Estas añaden paisajes que el corpus no tiene: minifundio con casas y bosque, dosel adulto denso, vivero con fundas azules.",
   "fuentes": [
     {
@@ -9,11 +9,15 @@
       "proyecto": "banana-detection-4hbck",
       "version": 3,
       "licencia": "CC BY 4.0",
-      "imgs_exportadas": 364,
-      "cajas": 55206,
+      "imgs_exportadas": 2067,
+      "cajas": 56156,
       "rol": "finca nueva — dosel adulto denso en bloques de siembra",
-      "descarga_verificada_bytes": 278000000,
-      "notas": "Originales DJI a 4000x3000, no recortes: se pueden retejar a la escala que convenga. 152 cajas por imagen. La clase 'Others' (950 cajas) hay que descartarla o remapearla."
+      "notas": "OJO: 2 clases, hay que remapear a clase unica antes de usarlo. Originales DJI a 4000x3000, no recortes: se pueden retejar a la escala que convenga. 152 cajas por imagen. La clase 'Others' (950 cajas) hay que descartarla o remapearla.",
+      "clases": [
+        "Bananas",
+        "Others"
+      ],
+      "descarga_verificada_mb": 244.4
     },
     {
       "carpeta": "nuevas/minifundio",
@@ -21,11 +25,14 @@
       "proyecto": "banana3-fynsc",
       "version": 1,
       "licencia": "CC BY 4.0",
-      "imgs_exportadas": 157,
+      "imgs_exportadas": 1147,
       "cajas": 51447,
       "rol": "finca nueva — LA MÁS PARECIDA A ARMAH, que es donde el modelo falla",
-      "descarga_verificada_bytes": null,
-      "notas": "Banano nadir mezclado con casas de zinc, palmas de coco, bosque y parcelas irregulares: paisaje de pequeño productor. Es exactamente el tipo de escena de armah (Ghana) y justo lo que NO hay en el entrenamiento actual, todo plantación comercial en hileras. 328 cajas/img a 640x640. Actualizado 2026-02-28, posterior al inventario de julio."
+      "notas": "Banano nadir mezclado con casas de zinc, palmas de coco, bosque y parcelas irregulares: paisaje de pequeño productor. Es exactamente el tipo de escena de armah (Ghana) y justo lo que NO hay en el entrenamiento actual, todo plantación comercial en hileras. 328 cajas/img a 640x640. Actualizado 2026-02-28, posterior al inventario de julio.",
+      "clases": [
+        "banana2 - v1 2025-08-09 8:27am"
+      ],
+      "descarga_verificada_mb": 169.6
     },
     {
       "carpeta": "nuevas/buvan",
@@ -33,11 +40,18 @@
       "proyecto": "banana_count_45-djrwv",
       "version": 1,
       "licencia": "CC BY 4.0",
-      "imgs_exportadas": 7852,
-      "cajas": 588241,
+      "imgs_exportadas": 9124,
+      "cajas": 595574,
       "rol": "finca nueva — vivero con fundas azules + dosel adulto sobre suelo rojo",
-      "descarga_verificada_bytes": null,
-      "notas": "OJO: entre sus clases figura literalmente 'Count banana plants - v38 2024-10-18 2:31pm', que parece un fork. NO lo es: esa clase tiene 0 anotaciones (esquema heredado al clonar) y las imágenes dieron 0 de 24 duplicados perceptuales contra el corpus local. Está augmentado (7.852 de 7.863); conviene deduplicar por stem antes de usar."
+      "notas": "OJO: 5 clases, hay que remapear a clase unica antes de usarlo. Entre ellas figura literalmente 'Count banana plants - v38 2024-10-18 2:31pm', heredada al clonar el esquema de otro proyecto; NO significa que sean las mismas imagenes (dieron 0 de 24 duplicados perceptuales contra el corpus local), pero conviene mirarla antes de fiarse. La v1 exporta 9.124 imagenes augmentadas de 7.852 disparos: deduplicar por stem.",
+      "clases": [
+        "2",
+        "banana-Tree",
+        "Others",
+        "Count banana plants - v38 2024-10-18 2:31pm",
+        "banana_tree"
+      ],
+      "descarga_verificada_mb": 1740.9
     },
     {
       "carpeta": "nuevas/macollas",
@@ -48,8 +62,11 @@
       "imgs_exportadas": 237,
       "cajas": 18038,
       "rol": "finca nueva — macollas adultas solapadas, el caso difícil del proyecto",
-      "descarga_verificada_bytes": 21848254,
-      "notas": "El ejemplo más puro de lo que el modelo no sabe leer: macollas adultas solapadas con fundas azules de racimo, sin borde claro entre individuos. Sólo 21 MB. La v8 son 237 imágenes sin augmentar (hay una v6 con 22.123 augmentadas que NO conviene)."
+      "notas": "El ejemplo más puro de lo que el modelo no sabe leer: macollas adultas solapadas con fundas azules de racimo, sin borde claro entre individuos. Solo 23,3 MB. La v8 son 237 imágenes sin augmentar (hay una v6 con 22.123 augmentadas que NO conviene).",
+      "clases": [
+        "banana"
+      ],
+      "descarga_verificada_mb": 23.3
     },
     {
       "carpeta": "nuevas/suelo_rojo",
@@ -57,23 +74,14 @@
       "proyecto": "detection_plants",
       "version": 2,
       "licencia": "CC BY 4.0",
-      "imgs_exportadas": 181,
+      "imgs_exportadas": 471,
       "cajas": 1888,
       "rol": "finca nueva — plantación joven en hileras sobre suelo rojo desnudo",
-      "descarga_verificada_bytes": 51335144,
-      "notas": "Dominio parecido a elliot pero de otra finca: riego por líneas y estacas. Algunas originales a 5280x3956."
-    },
-    {
-      "carpeta": "nuevas/qpl6j",
-      "workspace": "jorges-workspace-4uit3",
-      "proyecto": "banano-qpl6j",
-      "version": 1,
-      "licencia": "CC BY 4.0",
-      "imgs_exportadas": 71,
-      "cajas": 5078,
-      "rol": "finca nueva — banano adulto sobre suelo húmedo",
-      "descarga_verificada_bytes": 11964208,
-      "notas": "Creado 2026-06-19. Pequeña pero limpia. Aviso del cazador: cerca del 50% de alguna tesela sale negra; revisar antes de meterla."
+      "notas": "Dominio parecido a elliot pero de otra finca: riego por líneas y estacas. Algunas originales a 5280x3956.",
+      "clases": [
+        "plants_banano"
+      ],
+      "descarga_verificada_mb": 51.5
     }
   ],
   "preentreno_analogo": [
@@ -86,20 +94,11 @@
       "imgs_exportadas": 237,
       "cajas": 61041,
       "rol": "preentreno: la piña es el análogo geométrico más fiel a una macolla",
-      "descarga_verificada_bytes": 22580333,
-      "notas": "Una piña vista desde arriba ES una roseta, plantada tan densa que las hojas de plantas vecinas se cruzan: el mismo '¿dónde acaba una y empieza la otra?' del banano, con más densidad todavía (257 cajas por imagen). 22 MB: el preentreno más barato de la lista."
-    },
-    {
-      "carpeta": "preentreno/palma",
-      "workspace": "gis-40htp",
-      "proyecto": "palm-detection",
-      "version": 3,
-      "licencia": "CC BY 4.0",
-      "imgs_exportadas": 24985,
-      "cajas": 2034780,
-      "rol": "preentreno: dos millones de coronas radiales en nadir",
-      "descarga_verificada_bytes": 4094615636,
-      "notas": "4,1 GB. Palma aceitera cenital, joven y adulta, con solape de coronas. Enseña 'corona radial vista desde arriba' antes de afinar en banano. Creado 2026-03-13, no existía en el inventario de julio. Cabe en el disco de Kaggle pero se come tiempo de descarga: usarlo sólo si el preentreno barato con piña muestra que la vía funciona."
+      "notas": "Una piña vista desde arriba ES una roseta, plantada tan densa que las hojas de plantas vecinas se cruzan: el mismo '¿dónde acaba una y empieza la otra?' del banano, con más densidad todavía (257 cajas por imagen). 22 MB: el preentreno más barato de la lista.",
+      "clases": [
+        "0"
+      ],
+      "descarga_verificada_mb": 22.6
     }
   ],
   "descartados_con_prueba": [
@@ -123,5 +122,11 @@
       "que": "coffeeitcrsav/coffee_data_raw y datamerging-4nt3v/lstudio-morning-sunny",
       "por_que": "Licencia BY-NC-SA 4.0. No comercial + ShareAlike no se mezcla limpio en un repo AGPL-3.0 que se publica como producto."
     }
+  ],
+  "correcciones_del_control": [
+    "preentreno/palma ELIMINADO. Se habia registrado como '24.985 imgs y 2.034.780 cajas de palma aceitera cenital, clase unica'. La API dice 1.021 imagenes en la v3 y 427 cajas en todo el proyecto, con clases ['half','raw','\\'] — no es un corpus de coronas de palma vistas desde arriba, es otra cosa (parece madurez de racimo). No sirve de preentreno para este problema.",
+    "nuevas/qpl6j ELIMINADO. Su unica version es de tipo 'Roboflow Instant' (id 315086843) y la API de exportacion devuelve 404 para cualquier version: no se puede bajar el ZIP.",
+    "nuevas/buvan NO estaba roto: fallaba porque Roboflow genera el ZIP la primera vez que alguien lo pide y hasta entonces responde 200 sin enlace. El fallo era del descargador, que abortaba en seco en vez de reintentar. Arreglado; la v1 baja 1.740,9 MB.",
+    "Los recuentos de IMAGENES estaban tomados del proyecto y no de la version exportada, que va augmentada: banavista 364 -> 2.067, minifundio 157 -> 1.147, suelo_rojo 181 -> 471. Los recuentos de CAJAS si eran correctos. Al usarlas, contar disparos originales, no ficheros."
   ]
 }

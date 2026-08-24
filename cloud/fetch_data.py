@@ -41,8 +41,9 @@ MANIFIESTO = ROOT / "cloud" / "data_manifest.json"
 NUEVAS = ROOT / "cloud" / "nuevas_fincas.json"
 
 API = "https://api.roboflow.com/{workspace}/{proyecto}/{version}/yolov8?api_key={key}"
-REINTENTOS = 3
+REINTENTOS = 4
 ESPERA_S = 5
+ESPERA_GEN_S = 15  # generar el zip la primera vez tarda mas que un fallo de red
 
 
 def lee_key() -> str:
@@ -81,11 +82,19 @@ def _pide_enlace(fuente: dict[str, Any], key: str) -> tuple[str, float]:
             export = datos.get("export", {})
             enlace = export.get("link")
             if not enlace:
-                # Roboflow genera el zip de forma asíncrona la primera vez
-                if datos.get("progress") is not None:
-                    time.sleep(ESPERA_S)
+                # Roboflow genera el zip la PRIMERA vez que alguien lo pide, y hasta que
+                # termina responde 200 sin enlace. Antes esto abortaba en seco salvo que
+                # viniera un campo `progress`, que no siempre viene: un dataset perfecto
+                # se reportaba como roto sólo por pedirlo antes de tiempo (le pasó a uno
+                # de 1,7 GB). Ahora se reintenta siempre, con espera creciente.
+                if intento < REINTENTOS - 1:
+                    time.sleep(ESPERA_GEN_S * (intento + 1))
                     continue
-                raise RuntimeError(f"respuesta sin enlace: {list(datos)}")
+                raise RuntimeError(
+                    "Roboflow responde sin enlace de descarga tras "
+                    f"{REINTENTOS} intentos. Suele significar que esa versión no está "
+                    "generada en ese formato (las de tipo 'Roboflow Instant' no lo están)."
+                )
             return enlace, float(export.get("size") or 0)
         except urllib.error.HTTPError as e:
             ultimo = e
@@ -228,6 +237,8 @@ def main() -> int:
     ap.add_argument("--nuevas", action="store_true", help="las 6 fincas nuevas de cloud/nuevas_fincas.json")
     ap.add_argument("--preentreno", action="store_true", help="los análogos de preentreno (piña, palma)")
     ap.add_argument("--forzar", action="store_true", help="re-descargar aunque exista")
+    ap.add_argument("--comprobar", action="store_true",
+                    help="solo pregunta si cada fuente sigue viva; no descarga nada")
     ap.add_argument("--sin-dedup", action="store_true",
                     help="conserva las copias augmentadas de Roboflow (por defecto se quitan)")
     args = ap.parse_args()
@@ -268,6 +279,29 @@ def main() -> int:
         return 1
 
     key = lee_key()
+
+    if args.comprobar:
+        # Un manifiesto sin comprobar es una lista de cosas que fallaran en la nube, y
+        # alli cada fallo cuesta una sesion entera. Esto solo pide el enlace de
+        # exportacion a Roboflow: no baja ni un byte de imagen.
+        print(f"Comprobando {len(fuentes)} fuentes (sin descargar)")
+        print()
+        malas = 0
+        for f in fuentes:
+            etiqueta = f"{f['carpeta']} (v{f['version']})"
+            print(f"  {etiqueta:44s} ", end="", flush=True)
+            try:
+                _, tam = _pide_enlace(f, key)
+                print(f"OK {tam:9.1f} MB   {f['licencia']}")
+            except SystemExit:
+                raise
+            except Exception as e:
+                malas += 1
+                print(f"FALLA: {type(e).__name__}: {str(e)[:70]}")
+        print()
+        print(f"{len(fuentes) - malas}/{len(fuentes)} disponibles")
+        return 1 if malas else 0
+
     print(f"{len(fuentes)} fuentes -> {args.destino}\n")
     fallos = 0
     for f in fuentes:
