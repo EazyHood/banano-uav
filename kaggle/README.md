@@ -122,8 +122,23 @@ Los deja en `runs_cloud/kaggle/`.
 
 ⚠️ **Lo más caro que puede pasar:** si una corrida se pasa de las 12 horas, el guardado de
 ficheros del final es *best effort* — a veces funciona y a veces pierdes los pesos. Por eso
-el notebook se presupuesta 11 h y `cloud/train.py` reanuda desde `last.pt` si lo encuentra:
-una corrida cortada se continúa en la siguiente sesión en vez de empezar de cero.
+el notebook **no fija épocas, fija horas**: le pasa a ultralytics el tiempo que le queda del
+presupuesto y éste para solo al final de una época, dejando el modelo escrito. La corrida
+siempre cabe, entrene lo que entrene.
+
+### Encadenar sesiones (entrenar más de 12 h en total)
+
+`/kaggle/working` **arranca vacío en cada corrida**: «Save & Run All» crea una sesión limpia,
+así que el `last.pt` de la sesión anterior no está ahí y no se reanuda nada por sí solo. Lo
+que sí sobrevive es la **salida de la versión anterior**, si se la adjuntas como fuente:
+
+1. Abre el notebook en la web → panel derecho, `+ Add Input` → pestaña **Notebook Output** →
+   busca `banano-uav-entrenar` y añade su última versión.
+2. Vuelve a lanzar. La celda 8 busca los `last.pt` en `/kaggle/input/`, los copia a
+   `/kaggle/working/runs/` con su `args.yaml`, y `cloud/train.py` continúa desde ahí en vez
+   de empezar de cero.
+
+Sin ese paso, cada sesión reentrena desde el principio y las horas anteriores no suman.
 
 Referencias de tiempo, medidas en las corridas anteriores de este proyecto:
 `v10` (60 épocas, 768 px) tardó 4,2 h; `v12` (74 épocas, 768 px) 10,3 h; y `v11` a 1024 px

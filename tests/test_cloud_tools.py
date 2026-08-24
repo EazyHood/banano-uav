@@ -570,3 +570,17 @@ def test_una_clave_con_caracteres_raros_se_rechaza_antes_de_usarla():
             assert "Longitud leida" in str(e)
         else:
             raise AssertionError(f"deberia haber rechazado {mala!r}")
+
+
+def test_el_entrenamiento_valida_con_el_mismo_max_det_que_la_evaluacion():
+    # ultralytics valida al final de cada epoca y de ahi sale el best.pt (detect/val.py:125
+    # usa args.max_det). Si no se le pasa, usa el default 300, y con fincas de 328 cajas por
+    # imagen el recall de esa validacion esta topado: el "mejor" modelo se elegia con una
+    # metrica recortada, distinta de la que luego se publica.
+    import inspect
+
+    from cloud import train
+
+    fuente = inspect.getsource(train.entrena)
+    assert "max_det=args.max_det" in fuente, "train() no pasa max_det a modelo.train()"
+    assert train.MAX_DET >= 1000

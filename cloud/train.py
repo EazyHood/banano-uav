@@ -187,6 +187,12 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
         batch=batch,
         workers=workers,
         device=device,
+        # También en el ENTRENAMIENTO, no sólo en la evaluación final: ultralytics valida al
+        # terminar cada época y de ahí sale el best.pt (val.py:125 usa este mismo argumento).
+        # Con el default de 300 y una finca de 328 cajas por imagen, el recall de esa
+        # validación está topado por construcción, así que el "mejor" modelo se elegía con
+        # una métrica recortada. Encontrado por revisión adversarial el 2026-08-24.
+        max_det=args.max_det,
         project=proyecto,
         name=nombre,
         exist_ok=True,

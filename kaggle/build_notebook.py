@@ -252,6 +252,29 @@ DATA   = f"{SPLITS}/todas_las_fincas.yaml"
 # iteraciones por epoca, o sea 36 min/epoca: 40 epocas habrian sido 24 h y la sesion muere a
 # las 12. `--horas` se lo pasa a ultralytics, que lo comprueba al final de cada epoca y para
 # solo dejando el best.pt escrito. Asi la corrida SIEMPRE cabe, entrene lo que entrene.
+# REANUDAR entre sesiones. /kaggle/working arranca VACIO en cada corrida: "Save & Run All"
+# crea una sesion limpia, asi que el last.pt de la corrida anterior NO esta ahi y la
+# reanudacion de cloud/train.py no podia dispararse nunca. Lo que si sobrevive es la salida
+# de la version anterior, si se adjunta como fuente: aparece bajo /kaggle/input/. Se copia
+# de vuelta antes de entrenar. Sin esto, cada sesion reempieza de cero y las 12 h anteriores
+# no suman nada.
+import glob as _glob
+import shutil as _shutil
+copiados = 0
+for prev in _glob.glob("/kaggle/input/**/runs/**/weights/last.pt", recursive=True):
+    rel = prev.split("/runs/", 1)[1]
+    destino = f"{WORK}/runs/{rel}"
+    os.makedirs(os.path.dirname(destino), exist_ok=True)
+    if not os.path.exists(destino):
+        _shutil.copy2(prev, destino)
+        # el args.yaml va con el: ultralytics lo necesita para reanudar con la misma receta
+        args_prev = os.path.join(os.path.dirname(os.path.dirname(prev)), "args.yaml")
+        if os.path.exists(args_prev):
+            _shutil.copy2(args_prev, os.path.join(os.path.dirname(os.path.dirname(destino)), "args.yaml"))
+        copiados += 1
+print(f"pesos recuperados de una sesion anterior: {copiados}"
+      if copiados else "sin pesos previos: se entrena desde cero")
+
 restante_h = LIMITE_H - (time.time() - T0) / 3600
 horas_entreno = max(0.5, restante_h - 0.4)   # margen para guardar y recoger
 print(f"llevamos {(time.time()-T0)/3600:.2f} h; se entrena un maximo de {horas_entreno:.2f} h")
