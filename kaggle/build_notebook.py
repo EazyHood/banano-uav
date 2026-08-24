@@ -125,35 +125,52 @@ print("ultralytics", ultralytics.__version__)""",
     (
         "code",
         """# --- 4. La clave de Roboflow ------------------------------------------------------
-# Se define en Add-ons -> Secrets (no se puede adjuntar desde la CLI: la issue
-# Kaggle/kaggle-api#582 sigue abierta, asi que un kernel recien creado por 'kernels push'
-# necesita que abras el editor UNA vez para engancharle el secreto).
-try:
-    from kaggle_secrets import UserSecretsClient
-    os.environ["ROBOFLOW_API_KEY"] = UserSecretsClient().get_secret("ROBOFLOW_API_KEY").strip()
-    print("clave leida del secreto de Kaggle")
-except Exception as e:
-    # Kaggle responde HTTP 400 cuando el secreto NO EXISTE, y el cliente lo envuelve en un
-    # "Connection error trying to communicate with service", que suena a fallo de red y no
-    # lo es. Se traduce aqui para no mandar a nadie a mirar la conexion.
-    detalle = str(e)
-    falta = "400" in detalle or "Connection error" in detalle
-    # RuntimeError y no SystemExit: SystemExit revienta el formateador de traceback de
-    # IPython (TypeError: object of type NoneType has no len()) y tapa este mensaje.
-    raise RuntimeError(chr(10).join([
-        "=" * 70,
-        ("El secreto ROBOFLOW_API_KEY no esta definido en este notebook."
-         if falta else "No se pudo leer el secreto ROBOFLOW_API_KEY: " + detalle),
-        "",
-        "Se anade una sola vez, desde la web del notebook:",
-        "  Add-ons -> Secrets -> Add a new secret",
-        "  Label: ROBOFLOW_API_KEY   (exacto, en mayusculas)",
-        "  Value: tu Private API Key de https://app.roboflow.com/settings/api",
-        "         (la que NO empieza por rf_)",
-        "",
-        "Y deja marcada la casilla que se lo adjunta a este notebook.",
-        "=" * 70,
-    ])) from None""",
+# Dos vias, y basta con una:
+#   a) un DATASET PRIVADO adjunto con la clave dentro. Es el rodeo que documenta el propio
+#      Kaggle, y es el unico que se puede montar entero desde la terminal: el CLI no tiene
+#      ningun comando de secrets (issue Kaggle/kaggle-api#582, abierta).
+#   b) Add-ons -> Secrets, que hay que crear a mano desde la web.
+import glob
+
+clave = ""
+for ruta in glob.glob("/kaggle/input/*/roboflow.json"):
+    try:
+        clave = (json.load(open(ruta)).get("ROBOFLOW_API_KEY") or "").strip()
+        if clave:
+            print("clave leida del dataset privado adjunto")
+            break
+    except Exception:
+        continue
+
+if not clave:
+    try:
+        from kaggle_secrets import UserSecretsClient
+        clave = UserSecretsClient().get_secret("ROBOFLOW_API_KEY").strip()
+        print("clave leida del secreto de Kaggle")
+    except Exception as e:
+        # Kaggle responde HTTP 400 cuando el secreto NO EXISTE, y su cliente lo envuelve en
+        # un "Connection error trying to communicate with service", que suena a fallo de red
+        # y no lo es. Se traduce para no mandar a nadie a mirar la conexion.
+        detalle = str(e)
+        falta = "400" in detalle or "Connection error" in detalle
+        # RuntimeError y no SystemExit: SystemExit revienta el formateador de traceback de
+        # IPython (TypeError: object of type NoneType has no len()) y tapa este mensaje.
+        raise RuntimeError(chr(10).join([
+            "=" * 70,
+            ("No hay clave de Roboflow: ni dataset adjunto con roboflow.json, ni secreto."
+             if falta else "No se pudo leer la clave de Roboflow: " + detalle),
+            "",
+            "Cualquiera de las dos vale:",
+            "  a) adjunta el dataset privado que lleve un roboflow.json con la clave, o",
+            "  b) Add-ons -> Secrets -> Add a new secret",
+            "     Label: ROBOFLOW_API_KEY   (exacto, en mayusculas)",
+            "     Value: tu Private API Key de https://app.roboflow.com/settings/api",
+            "            (la que NO empieza por rf_)",
+            "=" * 70,
+        ])) from None
+
+os.environ["ROBOFLOW_API_KEY"] = clave
+print("clave disponible:", len(clave), "caracteres")""",
     ),
     (
         "code",
@@ -223,7 +240,12 @@ if HACER_BARRIDO:
 # La T4 tiene 16 GB frente a los 8 GB de casa, asi que cabe mas lote y no hay que
 # forzar workers=0 (aquello era un problema de Windows).
 IMGSZ   = 1024      # el barrido de arriba manda: si su optimo medio es otro, cambialo
-EPOCHS  = 100
+# PRIMERA PASADA = CALIBRACION. Las corridas anteriores de este proyecto dan 637 s/epoca a
+# 1024 px en una RTX 5060 con batch 4; 100 epocas serian ~17 h y NO caben en las 12 h de
+# Kaggle. Aqui no se sabe todavia cuanto tarda una epoca en dos T4 con mas batch, asi que
+# esta corrida sirve para medirlo con el pipeline entero funcionando. Con el s/epoca real
+# de results.csv se dimensiona la siguiente sin adivinar.
+EPOCHS  = 40
 RECETA  = "escala"  # v10 | cenital | escala   (ver cloud/train.py)
 MODELO  = "yolo11m.pt"
 DATA    = f"{SPLITS}/todas_las_fincas.yaml"
