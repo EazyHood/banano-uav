@@ -123,6 +123,47 @@ def barre(pesos: Path, data: Path, tamanos: list[int], device: str, conf: float,
     return filas
 
 
+def resumen_lofo(fincas: dict[str, Any]) -> list[dict[str, Any]]:
+    """Agrega el barrido de TODAS las fincas retenidas, por resolucion.
+
+    Elegir el imgsz mirando una sola finca es afinar sobre el holdout, y este repo ya
+    cometio ese error una vez con el umbral de confianza (lo corrigio eval_count.py con
+    calibracion cruzada). Aqui la decision sale del promedio, y ademas se reporta en
+    CUANTAS fincas gana cada resolucion: un promedio alto que viene de una sola finca
+    disparada no es una recomendacion, es un accidente.
+    """
+    por_imgsz: dict[int, list[tuple[str, float, float]]] = {}
+    for nombre, datos in fincas.items():
+        for fila in datos.get("barrido", []):
+            por_imgsz.setdefault(fila["imgsz"], []).append(
+                (nombre, fila["mAP50"], fila["recall"])
+            )
+
+    # en cuantas fincas es ESTA resolucion la mejor
+    mejor_de: dict[int, int] = {}
+    for datos in fincas.values():
+        filas = datos.get("barrido", [])
+        if filas:
+            ganadora = max(filas, key=lambda f: f["mAP50"])["imgsz"]
+            mejor_de[ganadora] = mejor_de.get(ganadora, 0) + 1
+
+    out: list[dict[str, Any]] = []
+    for imgsz, vals in sorted(por_imgsz.items()):
+        maps = [v[1] for v in vals]
+        recs = [v[2] for v in vals]
+        out.append({
+            "imgsz": imgsz,
+            "fincas": len(vals),
+            "mAP50_medio": round(sum(maps) / len(maps), 4),
+            "mAP50_min": round(min(maps), 4),
+            "mAP50_max": round(max(maps), 4),
+            "recall_medio": round(sum(recs) / len(recs), 4),
+            "gana_en_n_fincas": mejor_de.get(imgsz, 0),
+            "peor_finca": min(vals, key=lambda v: v[1])[0],
+        })
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--pesos", type=Path, default=ROOT / "models" / "banana_multifarm_v10.pt")

@@ -458,3 +458,30 @@ def test_los_splits_que_se_versionan_no_llevan_rutas_de_una_maquina():
         texto = y.read_text(encoding="utf-8")
         assert "C:/Users" not in texto and ("C:" + chr(92) + "Users") not in texto, y.name
         assert "/home/" not in texto, y.name
+
+
+def test_el_resumen_del_barrido_destapa_la_media_arrastrada_por_una_finca():
+    # Elegir la resolucion mirando una sola finca es afinar sobre el holdout — el error que
+    # este repo ya corrigio una vez con el umbral de confianza. Pero un promedio a secas
+    # tampoco basta: una finca disparada puede ganar la media siendo la peor opcion para
+    # todas las demas. Por eso se reporta EN CUANTAS FINCAS gana cada resolucion.
+    from cloud.scale_sweep import resumen_lofo
+
+    fincas = {
+        "lofo_a": {"barrido": [{"imgsz": 768, "mAP50": 0.20, "recall": 0.15},
+                               {"imgsz": 1024, "mAP50": 0.30, "recall": 0.25}]},
+        "lofo_b": {"barrido": [{"imgsz": 768, "mAP50": 0.22, "recall": 0.17},
+                               {"imgsz": 1024, "mAP50": 0.31, "recall": 0.26}]},
+        "lofo_c": {"barrido": [{"imgsz": 768, "mAP50": 0.95, "recall": 0.90},
+                               {"imgsz": 1024, "mAP50": 0.10, "recall": 0.08}]},
+    }
+    r = {x["imgsz"]: x for x in resumen_lofo(fincas)}
+
+    # 768 gana la media...
+    assert r[768]["mAP50_medio"] > r[1024]["mAP50_medio"]
+    # ...pero solo porque UNA finca esta disparada: 1024 es mejor en dos de las tres
+    assert r[768]["gana_en_n_fincas"] == 1
+    assert r[1024]["gana_en_n_fincas"] == 2
+    # y el rango lo deja ver a simple vista
+    assert r[768]["mAP50_min"] == 0.20 and r[768]["mAP50_max"] == 0.95
+    assert r[1024]["mAP50_max"] - r[1024]["mAP50_min"] < 0.25
