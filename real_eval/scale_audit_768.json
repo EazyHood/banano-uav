@@ -4,7 +4,7 @@
   "fuentes": [
     {
       "carpeta": "realdata\\newfarms\\m2",
-      "imgs": 394,
+      "imgs": 197,
       "ficheros_etiqueta": 197,
       "etiquetas_vacias_en_muestra": 2,
       "cajas_por_img": 126.3,
@@ -22,11 +22,11 @@
     },
     {
       "carpeta": "realdata\\extra\\plantas_platano",
-      "imgs": 3200,
+      "imgs": 1600,
       "ficheros_etiqueta": 1600,
-      "etiquetas_vacias_en_muestra": 4,
-      "cajas_por_img": 21.7,
-      "cajas_estimadas": 34744,
+      "etiquetas_vacias_en_muestra": 11,
+      "cajas_por_img": 20.3,
+      "cajas_estimadas": 32440,
       "img_w": 640,
       "img_h": 640,
       "clases": [
@@ -40,11 +40,11 @@
     },
     {
       "carpeta": "realdata\\extra\\plantas_jovenes_80m1",
-      "imgs": 4318,
+      "imgs": 2159,
       "ficheros_etiqueta": 2159,
-      "etiquetas_vacias_en_muestra": 20,
-      "cajas_por_img": 15.8,
-      "cajas_estimadas": 34026,
+      "etiquetas_vacias_en_muestra": 32,
+      "cajas_por_img": 14.7,
+      "cajas_estimadas": 31727,
       "img_w": 640,
       "img_h": 640,
       "clases": [
@@ -53,35 +53,16 @@
       "planta_px_real": 14.0,
       "planta_px_imgsz": 16.8,
       "p10_px_imgsz": 14.4,
-      "p90_px_imgsz": 19.2,
-      "frac_indetectable": 0.0
-    },
-    {
-      "carpeta": "realdata\\extra",
-      "imgs": 19784,
-      "ficheros_etiqueta": 9892,
-      "etiquetas_vacias_en_muestra": 6,
-      "cajas_por_img": 13.7,
-      "cajas_estimadas": 135421,
-      "img_w": 640,
-      "img_h": 640,
-      "clases": [
-        "0",
-        "1"
-      ],
-      "planta_px_real": 16.0,
-      "planta_px_imgsz": 19.2,
-      "p10_px_imgsz": 14.4,
-      "p90_px_imgsz": 247.1,
+      "p90_px_imgsz": 18.9,
       "frac_indetectable": 0.0
     },
     {
       "carpeta": "realdata\\extra\\plantas_jovenes_50m",
-      "imgs": 756,
+      "imgs": 378,
       "ficheros_etiqueta": 378,
       "etiquetas_vacias_en_muestra": 0,
       "cajas_por_img": 7.7,
-      "cajas_estimadas": 2922,
+      "cajas_estimadas": 2909,
       "img_w": 640,
       "img_h": 640,
       "clases": [
@@ -94,48 +75,49 @@
       "frac_indetectable": 0.0
     },
     {
-      "carpeta": "realdata\\newfarms",
-      "imgs": 5654,
-      "ficheros_etiqueta": 2827,
-      "etiquetas_vacias_en_muestra": 1,
-      "cajas_por_img": 72.5,
-      "cajas_estimadas": 204887,
-      "img_w": 984,
-      "img_h": 1028,
-      "clases": [
-        "0"
-      ],
-      "planta_px_real": 30.2,
-      "planta_px_imgsz": 22.6,
-      "p10_px_imgsz": 12.1,
-      "p90_px_imgsz": 32.9,
-      "frac_indetectable": 0.0273
-    },
-    {
       "carpeta": "realdata\\newfarms\\karachi",
-      "imgs": 3844,
+      "imgs": 1922,
       "ficheros_etiqueta": 1922,
       "etiquetas_vacias_en_muestra": 0,
-      "cajas_por_img": 78.2,
-      "cajas_estimadas": 150358,
-      "img_w": 984,
-      "img_h": 1000,
+      "cajas_por_img": 79.0,
+      "cajas_estimadas": 151742,
+      "img_w": 982,
+      "img_h": 932,
       "clases": [
         "0"
       ],
-      "planta_px_real": 30.1,
-      "planta_px_imgsz": 23.1,
-      "p10_px_imgsz": 17.5,
-      "p90_px_imgsz": 31.1,
+      "planta_px_real": 28.8,
+      "planta_px_imgsz": 22.5,
+      "p10_px_imgsz": 17.2,
+      "p90_px_imgsz": 29.3,
       "frac_indetectable": 0.0001
     },
     {
+      "carpeta": "realdata\\extra\\ml_agromatica",
+      "imgs": 1312,
+      "ficheros_etiqueta": 1312,
+      "etiquetas_vacias_en_muestra": 1,
+      "cajas_por_img": 6.3,
+      "cajas_estimadas": 8226,
+      "img_w": 1080,
+      "img_h": 1920,
+      "clases": [
+        "0",
+        "1"
+      ],
+      "planta_px_real": 73.2,
+      "planta_px_imgsz": 29.3,
+      "p10_px_imgsz": 15.2,
+      "p90_px_imgsz": 71.1,
+      "frac_indetectable": 0.0112
+    },
+    {
       "carpeta": "realdata\\newfarms\\elliot",
-      "imgs": 792,
+      "imgs": 396,
       "ficheros_etiqueta": 396,
       "etiquetas_vacias_en_muestra": 0,
-      "cajas_por_img": 98.9,
-      "cajas_estimadas": 39153,
+      "cajas_por_img": 97.0,
+      "cajas_estimadas": 38412,
       "img_w": 1280,
       "img_h": 1280,
       "clases": [
@@ -144,31 +126,12 @@
       "planta_px_real": 52.0,
       "planta_px_imgsz": 31.2,
       "p10_px_imgsz": 21.6,
-      "p90_px_imgsz": 40.8,
+      "p90_px_imgsz": 39.4,
       "frac_indetectable": 0.0
     },
     {
-      "carpeta": "realdata\\extra\\ml_agromatica",
-      "imgs": 2624,
-      "ficheros_etiqueta": 1312,
-      "etiquetas_vacias_en_muestra": 0,
-      "cajas_por_img": 6.4,
-      "cajas_estimadas": 8410,
-      "img_w": 1080,
-      "img_h": 1920,
-      "clases": [
-        "0",
-        "1"
-      ],
-      "planta_px_real": 79.7,
-      "planta_px_imgsz": 31.9,
-      "p10_px_imgsz": 16.2,
-      "p90_px_imgsz": 71.5,
-      "frac_indetectable": 0.0023
-    },
-    {
       "carpeta": "realdata\\newfarms\\armah",
-      "imgs": 124,
+      "imgs": 62,
       "ficheros_etiqueta": 62,
       "etiquetas_vacias_en_muestra": 0,
       "cajas_por_img": 22.2,
@@ -186,25 +149,43 @@
     },
     {
       "carpeta": "realdata\\extra\\etiquetasnuevas",
-      "imgs": 1010,
+      "imgs": 505,
       "ficheros_etiqueta": 505,
       "etiquetas_vacias_en_muestra": 0,
-      "cajas_por_img": 7.0,
-      "cajas_estimadas": 3543,
+      "cajas_por_img": 7.7,
+      "cajas_estimadas": 3906,
       "img_w": 1600,
       "img_h": 1300,
       "clases": [
         "0"
       ],
-      "planta_px_real": 96.8,
-      "planta_px_imgsz": 46.4,
-      "p10_px_imgsz": 27.6,
-      "p90_px_imgsz": 77.5,
+      "planta_px_real": 95.9,
+      "planta_px_imgsz": 46.0,
+      "p10_px_imgsz": 28.1,
+      "p90_px_imgsz": 77.2,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\extra\\prueba2rgb",
+      "imgs": 505,
+      "ficheros_etiqueta": 505,
+      "etiquetas_vacias_en_muestra": 0,
+      "cajas_por_img": 3.3,
+      "cajas_estimadas": 1664,
+      "img_w": 1600,
+      "img_h": 1300,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 113.2,
+      "planta_px_imgsz": 54.3,
+      "p10_px_imgsz": 30.1,
+      "p90_px_imgsz": 83.0,
       "frac_indetectable": 0.0
     },
     {
       "carpeta": "realdata\\newfarms\\conteo",
-      "imgs": 198,
+      "imgs": 99,
       "ficheros_etiqueta": 99,
       "etiquetas_vacias_en_muestra": 0,
       "cajas_por_img": 5.0,
@@ -221,26 +202,8 @@
       "frac_indetectable": 0.0
     },
     {
-      "carpeta": "realdata\\extra\\prueba2rgb",
-      "imgs": 1010,
-      "ficheros_etiqueta": 505,
-      "etiquetas_vacias_en_muestra": 0,
-      "cajas_por_img": 3.4,
-      "cajas_estimadas": 1694,
-      "img_w": 1600,
-      "img_h": 1300,
-      "clases": [
-        "0"
-      ],
-      "planta_px_real": 118.1,
-      "planta_px_imgsz": 56.7,
-      "p10_px_imgsz": 29.1,
-      "p90_px_imgsz": 87.3,
-      "frac_indetectable": 0.0
-    },
-    {
       "carpeta": "realdata\\extra\\conteobanano",
-      "imgs": 100,
+      "imgs": 50,
       "ficheros_etiqueta": 50,
       "etiquetas_vacias_en_muestra": 0,
       "cajas_por_img": 20.3,
@@ -257,26 +220,8 @@
       "frac_indetectable": 0.0
     },
     {
-      "carpeta": "realdata\\pose",
-      "imgs": 1404,
-      "ficheros_etiqueta": 702,
-      "etiquetas_vacias_en_muestra": 0,
-      "cajas_por_img": 13.0,
-      "cajas_estimadas": 9140,
-      "img_w": 480,
-      "img_h": 480,
-      "clases": [
-        "0"
-      ],
-      "planta_px_real": 103.5,
-      "planta_px_imgsz": 165.7,
-      "p10_px_imgsz": 116.7,
-      "p90_px_imgsz": 217.6,
-      "frac_indetectable": 0.0004
-    },
-    {
       "carpeta": "realdata\\count_clean",
-      "imgs": 1304,
+      "imgs": 652,
       "ficheros_etiqueta": 652,
       "etiquetas_vacias_en_muestra": 0,
       "cajas_por_img": 10.8,
@@ -294,7 +239,7 @@
     },
     {
       "carpeta": "realdata\\count_banana_plants",
-      "imgs": 1404,
+      "imgs": 702,
       "ficheros_etiqueta": 702,
       "etiquetas_vacias_en_muestra": 0,
       "cajas_por_img": 12.5,
@@ -311,98 +256,116 @@
       "frac_indetectable": 0.0
     },
     {
-      "carpeta": "realdata\\count_plus",
-      "imgs": 1304,
-      "ficheros_etiqueta": 652,
+      "carpeta": "realdata\\pose",
+      "imgs": 702,
+      "ficheros_etiqueta": 702,
       "etiquetas_vacias_en_muestra": 0,
-      "cajas_por_img": 11.1,
-      "cajas_estimadas": 7205,
+      "cajas_por_img": 12.3,
+      "cajas_estimadas": 8610,
       "img_w": 480,
       "img_h": 480,
       "clases": [
         "0"
       ],
-      "planta_px_real": 108.5,
-      "planta_px_imgsz": 173.6,
-      "p10_px_imgsz": 122.7,
-      "p90_px_imgsz": 224.3,
-      "frac_indetectable": 0.0
+      "planta_px_real": 105.6,
+      "planta_px_imgsz": 169.0,
+      "p10_px_imgsz": 119.1,
+      "p90_px_imgsz": 223.1,
+      "frac_indetectable": 0.0004
     },
     {
-      "carpeta": "realdata\\synth_cp2",
-      "imgs": 3200,
-      "ficheros_etiqueta": 1600,
+      "carpeta": "realdata\\count_plus",
+      "imgs": 652,
+      "ficheros_etiqueta": 652,
       "etiquetas_vacias_en_muestra": 0,
-      "cajas_por_img": 20.9,
-      "cajas_estimadas": 33432,
+      "cajas_por_img": 11.0,
+      "cajas_estimadas": 7149,
       "img_w": 480,
       "img_h": 480,
       "clases": [
         "0"
       ],
-      "planta_px_real": 110.6,
-      "planta_px_imgsz": 177.0,
-      "p10_px_imgsz": 124.6,
-      "p90_px_imgsz": 236.0,
+      "planta_px_real": 108.4,
+      "planta_px_imgsz": 173.5,
+      "p10_px_imgsz": 122.6,
+      "p90_px_imgsz": 223.8,
       "frac_indetectable": 0.0
     },
     {
       "carpeta": "realdata\\synth_cp",
-      "imgs": 2400,
+      "imgs": 1200,
       "ficheros_etiqueta": 1200,
       "etiquetas_vacias_en_muestra": 0,
-      "cajas_por_img": 18.9,
-      "cajas_estimadas": 22704,
+      "cajas_por_img": 18.3,
+      "cajas_estimadas": 21984,
       "img_w": 480,
       "img_h": 480,
       "clases": [
         "0"
       ],
-      "planta_px_real": 111.4,
-      "planta_px_imgsz": 178.3,
-      "p10_px_imgsz": 125.3,
-      "p90_px_imgsz": 239.2,
+      "planta_px_real": 110.0,
+      "planta_px_imgsz": 176.0,
+      "p10_px_imgsz": 122.5,
+      "p90_px_imgsz": 237.6,
+      "frac_indetectable": 0.0
+    },
+    {
+      "carpeta": "realdata\\synth_cp2",
+      "imgs": 1600,
+      "ficheros_etiqueta": 1600,
+      "etiquetas_vacias_en_muestra": 0,
+      "cajas_por_img": 20.4,
+      "cajas_estimadas": 32680,
+      "img_w": 480,
+      "img_h": 480,
+      "clases": [
+        "0"
+      ],
+      "planta_px_real": 110.2,
+      "planta_px_imgsz": 176.4,
+      "p10_px_imgsz": 125.6,
+      "p90_px_imgsz": 236.5,
       "frac_indetectable": 0.0
     },
     {
       "carpeta": "realdata\\extra\\banana_counting",
-      "imgs": 4688,
+      "imgs": 2344,
       "ficheros_etiqueta": 2344,
       "etiquetas_vacias_en_muestra": 0,
-      "cajas_por_img": 12.3,
-      "cajas_estimadas": 28831,
+      "cajas_por_img": 11.4,
+      "cajas_estimadas": 26780,
       "img_w": 256,
       "img_h": 256,
       "clases": [
         "0"
       ],
-      "planta_px_real": 61.5,
-      "planta_px_imgsz": 184.4,
-      "p10_px_imgsz": 130.4,
-      "p90_px_imgsz": 244.0,
+      "planta_px_real": 62.4,
+      "planta_px_imgsz": 187.3,
+      "p10_px_imgsz": 130.2,
+      "p90_px_imgsz": 249.0,
       "frac_indetectable": 0.0
     },
     {
       "carpeta": "realdata\\extra\\platano-lasuiza",
-      "imgs": 2078,
+      "imgs": 1039,
       "ficheros_etiqueta": 1039,
       "etiquetas_vacias_en_muestra": 0,
-      "cajas_por_img": 16.1,
-      "cajas_estimadas": 16712,
+      "cajas_por_img": 16.6,
+      "cajas_estimadas": 17211,
       "img_w": 640,
       "img_h": 640,
       "clases": [
         "0"
       ],
-      "planta_px_real": 274.1,
-      "planta_px_imgsz": 328.9,
-      "p10_px_imgsz": 93.5,
-      "p90_px_imgsz": 575.4,
-      "frac_indetectable": 0.0031
+      "planta_px_real": 275.8,
+      "planta_px_imgsz": 331.0,
+      "p10_px_imgsz": 105.9,
+      "p90_px_imgsz": 576.4,
+      "frac_indetectable": 0.003
     },
     {
       "carpeta": "realdata\\newfarms\\lasuiza",
-      "imgs": 302,
+      "imgs": 151,
       "ficheros_etiqueta": 151,
       "etiquetas_vacias_en_muestra": 0,
       "cajas_por_img": 4.8,

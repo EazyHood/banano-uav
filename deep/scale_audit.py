@@ -5,22 +5,26 @@ y 0.172 en armah (finca nunca vista). Se venía leyendo como "domain gap" visual
 otro suelo, otra luz, otra variedad. Al medir el tamaño de las cajas resultó ser,
 en primer lugar, un problema de ESCALA:
 
-    a imgsz 768, la planta mediana mide 10 px en m2 y 333 px en lasuiza (33x).
+    a imgsz 768, la planta mediana mide 10 px en m2 y 333 px en lasuiza (35x).
 
 Y peor: el entrenamiento de v10 está dominado por instancias diminutas. Contando
 CAJAS (que es lo que ve la función de pérdida, no las imágenes):
 
-    plantas_jovenes_80m1 + plantas_platano = 65.659 cajas de ~16-17 px
-    count_banana_plants                    =  8.601 cajas de ~169 px
+    plantas_jovenes_80m1 + plantas_platano = ~67.000 cajas de ~16-17 px
+    count_banana_plants                    =  ~7.300 cajas de ~169 px
 
-El 80% de lo que el modelo aprendió son plantas de 16 píxeles. armah las tiene de
+(Cifras aproximadas a propósito: `cajas_estimadas` extrapola desde una muestra de 200
+ficheros de etiquetas, así que baila unos cientos entre corridas. Lo que no baila es la
+proporción, y es la que importa.)
+
+El 81% de lo que el modelo aprendió son plantas de 16-17 px. armah las tiene de
 45 px: cae en tierra de nadie entre los dos modos del entrenamiento. Eso explica
 un recall de 0.139 mucho mejor que "el suelo de Ghana es distinto", y explica que
 v12 empeorase armah (añadió masa en los extremos —m2 10 px, lasuiza 333 px— no en
 el centro donde vive armah).
 
 Consecuencia práctica: `scale=0.6` de ultralytics cubre un rango de ~4x (0.4x-1.6x).
-Para cubrir 33x hace falta remuestrear los datos, no sólo aumentar.
+Para cubrir 35x hace falta remuestrear los datos, no sólo aumentar.
 
 Uso:
     python deep/scale_audit.py                       # audita todas las fuentes conocidas

@@ -163,8 +163,14 @@ dosel cerrado) cuando la fiabilidad baja.
 ## 🎯 Modelo entrenado con imágenes REALES (listo para usar)
 
 Incluye **`models/banana_multifarm_v10.pt`** — un detector YOLO11m entrenado sobre ~5.100
-imágenes UAV de **5 fincas independientes** de banano/plátano. Se usa directamente sobre tus
-ortofotos, **sin entrenar nada**:
+imágenes UAV de banano/plátano. Se usa directamente sobre tus ortofotos, **sin entrenar nada**:
+
+> 📌 **Corrección (2026-08-24):** aquí se decía "5 fincas independientes". Contando **fuentes
+> realmente distintas** son **tres**: los tres proyectos de `agromatica2025` son un mismo
+> operador volando a tres altitudes, y `prueba2rgb` resultó ser byte a byte el mismo dataset
+> que `etiquetasnuevas`. Y en **disparos originales** —Roboflow exporta varias copias
+> augmentadas de cada foto— esas 5.100 imágenes son bastante menos: `plantas_jovenes_80m1`
+> son 407 fotos, no 2.159. El detalle, en [`docs/escala-y-fugas.md`](docs/escala-y-fugas.md).
 
 ```bash
 pip install -e .[deep]
@@ -173,7 +179,9 @@ banano-detect --input tu_ortofoto.tif --gsd 3.0 \
     --out resultados
 ```
 
-**Medido en 4 protocolos, del más fácil al más honesto** (mismo modelo, imgsz 768):
+**Medido en 3 protocolos, del más fácil al más honesto** (mismo modelo, imgsz 768). Hay un
+cuarto, `holdout_newfarms`, que no se lista aquí porque a 768 px medía sobre todo desajuste
+de escala y no generalización — ver [`docs/escala-y-fugas.md`](docs/escala-y-fugas.md):
 
 | protocolo | mAP50 | error del conteo total | error medio por imagen |
 |---|---|---|---|
@@ -198,7 +206,7 @@ banano-detect --input tu_ortofoto.tif --gsd 3.0 \
 
 > 🔍 **Por qué falla en finca nueva: es, en primer lugar, un problema de escala.**
 > [`deep/scale_audit.py`](deep/scale_audit.py) mide que a imgsz 768 la planta mediana ocupa
-> **10 px en una finca y 333 px en otra** (33×), y que el **81 % de las cajas** con las que se
+> **10 px en una finca y 333 px en otra** (35×), y que el **81 % de las cajas** con las que se
 > entrenó v10 son plantas de **16-17 px**. La finca nueva las tiene de 45 px, en una banda que
 > apenas aparece en el entrenamiento (menos del 1 % de las cajas entre 21 y 46 px). Eso explica
 > el recall de 0,139 mejor que "otro suelo, otra luz", y explica que v12 —entrenado con más

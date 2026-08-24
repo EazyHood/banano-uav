@@ -28,12 +28,13 @@ a la que el modelo mira (`imgsz`). A 768 px:
 | `count_banana_plants` | 169 | 12 | train (finca original) |
 | `newfarms/lasuiza` | 333 | 5 | train desde v12 |
 
-**33× entre los extremos.** Y lo que decide el aprendizaje no son las imágenes sino las
+**35× entre los extremos** (lo que imprime `deep/scale_audit.py`; la tabla de arriba
+redondea a enteros, de ahí que a ojo parezcan 33). Y lo que decide el aprendizaje no son las imágenes sino las
 cajas. Sobre el pool de entrenamiento real de v10:
 
 ```
 hasta  16 px   39.6 %
-hasta  17 px   81.2 %   <- el 81 % del entrenamiento son plantas de 16-17 px
+hasta  17 px   81.2 %   <- el 81 % del entrenamiento son plantas de 16-17 px (dos fuentes)
 hasta  21 px   84.7 %
 hasta  46 px   85.5 %   <- entre 21 y 46 px hay menos del 1 %
 hasta 174 px  100.0 %
@@ -169,8 +170,8 @@ originales** en vez de ficheros —Roboflow exporta varias copias augmentadas de
 | `extra/plantas_jovenes_50m` | 378 | 72 |
 | `count_banana_plants` | 702 | 451 |
 
-Las tres primeras aportan **el 81 % de las cajas** del entrenamiento de v10 y salen de
-**783 fotos** de un único operador (workspace `agromatica2025`, tres altitudes de vuelo:
+Las tres primeras aportan **el 84,7 % de las cajas** del entrenamiento de v10 (el 81,2 % lo
+dan sólo las dos mayores) y salen de **783 fotos** de un único operador (workspace `agromatica2025`, tres altitudes de vuelo:
 50 m, 80 m y 100 m). Sumado a que `prueba2rgb` es una copia de `etiquetasnuevas`, las
 fuentes realmente independientes del entrenamiento de v10 son **tres**, no cinco.
 
