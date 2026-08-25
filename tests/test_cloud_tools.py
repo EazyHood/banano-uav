@@ -796,3 +796,38 @@ def test_el_lanzador_aborta_si_la_cuota_no_alcanza(tmp_path):
     assert pos_push != -1
     assert pos_cuota < pos_push, "la cuota se comprueba DESPUES de empujar el kernel"
     assert "return 2" in fuente
+
+
+def test_el_aviso_de_cancelacion_explica_la_cuota(tmp_path, monkeypatch):
+    # El 25-ago el vigia escribio "no llego a buen puerto, mira el log" y PISO un informe que
+    # si explicaba la causa. El log no menciona la cuota por ningun lado, asi que ese aviso
+    # mandaba a buscar donde no estaba. Un aviso que no da la causa teniendola a un comando de
+    # distancia es peor que no avisar: hace perder el tiempo.
+    #
+    # Se ejecuta de verdad, con la cuota y el estado simulados: comprobar que la palabra
+    # "lee_cuota" aparece en el fuente no vale, porque sigue apareciendo en el import aunque
+    # el resultado no se use (lo enseño una mutacion).
+    sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
+    import al_terminar
+    import cuota as mod_cuota
+
+    destino = tmp_path / "VEREDICTO.md"
+    monkeypatch.setattr(al_terminar, "VEREDICTO", destino)
+    monkeypatch.setattr(al_terminar, "estado", lambda kid: "CANCEL")
+    monkeypatch.setattr(al_terminar, "avisa", lambda *a, **k: None)
+    monkeypatch.setattr(sys, "argv", ["al_terminar.py", "--kernel", "u/k"])
+
+    # (a) cuota agotada -> el aviso tiene que señalarla
+    monkeypatch.setattr(mod_cuota, "lee", lambda: (30.46, 0.0))
+    assert al_terminar.main() == 0
+    texto = destino.read_text(encoding="utf-8")
+    assert "cuota" in texto.lower()
+    assert "30.46" in texto or "30,46" in texto
+    assert "sábado" in texto or "sabado" in texto, "no dice cuándo vuelve"
+
+    # (b) con cuota de sobra NO puede echarle la culpa a la cuota: manda al log
+    monkeypatch.setattr(mod_cuota, "lee", lambda: (2.0, 28.0))
+    assert al_terminar.main() == 0
+    texto = destino.read_text(encoding="utf-8")
+    assert "no fue la cuota" in texto.lower()
+    assert "--log" in texto

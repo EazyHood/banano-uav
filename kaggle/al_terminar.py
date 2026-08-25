@@ -123,10 +123,42 @@ def main() -> int:
         return 1
 
     if st in ("ERROR", "CANCEL"):
+        # Una cancelación casi siempre es la cuota agotada, no un fallo del código. Decirlo
+        # aquí importa: el 25-ago este mismo aviso salió como "no llegó a buen puerto" y
+        # mandaba a leer el log — y el log no dice ni una palabra de cuota. La causa está a
+        # un comando de distancia, así que se consulta y se escribe.
+        sys.path.insert(0, str(AQUI))
+        try:
+            from cuota import caben_horas
+            from cuota import lee as lee_cuota
+
+            q = lee_cuota()
+        except Exception:
+            q = None
+
+        if q and q[1] <= 0.01:
+            causa = (
+                f"**Se agotó la cuota de GPU** ({q[0]:.2f} h usadas de 30). No falló el "
+                "código: Kaggle corta la corrida cuando la cuota llega a cero. Se gasta "
+                "~1,7x más rápido que el reloj porque asigna dos T4 y cobra por las dos, "
+                "así que las 30 h semanales son ~17 h de reloj. **Vuelve el sábado a "
+                "medianoche UTC** (19:00 del viernes en Colombia)."
+            )
+            orden = "kaggle\\cuota.py     # y cuando haya cuota:  kaggle\\lanzar.py"
+        elif q:
+            causa = (
+                f"Cuota disponible: {q[1]:.2f} h ({caben_horas(q[1]):.1f} h de reloj), así "
+                "que **no fue la cuota**. Hay que mirar el log."
+            )
+            orden = "kaggle\\lanzar.py --log"
+        else:
+            causa = "No pude leer la cuota para descartar que fuera eso."
+            orden = "kaggle\\cuota.py     # y luego:  kaggle\\lanzar.py --log"
+
         escribe(
-            f"# Banano: la corrida terminó con {st}\n\n"
-            f"El entrenamiento no llegó a buen puerto. Para ver por qué, sin descargar la\n"
-            f"salida entera:\n\n```\ncd {ROOT}\n.venv\\Scripts\\python.exe kaggle\\lanzar.py --log\n```\n"
+            f"# Banano: la corrida terminó con {st}\n\n{causa}\n\n"
+            f"```\ncd {ROOT}\n.venv\\Scripts\\python.exe {orden}\n```\n",
+            titulo="Banano: la corrida se cortó",
         )
         return 0
 
