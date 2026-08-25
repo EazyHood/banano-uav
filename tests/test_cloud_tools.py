@@ -758,3 +758,41 @@ def test_un_path_ya_absoluto_se_deja_en_paz(tmp_path):
     y = tmp_path / "abs.yaml"
     y.write_text(f"path: {tmp_path.as_posix()}\ntrain:\n  - a/train/images\nnc: 1\n", encoding="utf-8")
     assert resuelve(y) == y
+
+
+# ------------------------------------------------------------------------ cuota GPU
+
+
+def test_la_cuota_se_gasta_mas_rapido_que_el_reloj():
+    # El 24-ago-2026 se lanzo una tirada de 10,6 h de reloj con 14,6 h de cuota libres y
+    # Kaggle la CANCELO a mitad: se perdio la corrida y la cuota de la semana. La causa es
+    # que Kaggle asigna DOS T4 (no hay opcion de una sola con GPU) y cobra por las dos,
+    # aunque cloud/train.py use una. Medido: 1,62x en un tramo y 1,18x en otro.
+    sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
+    from cuota import CUOTA_POR_HORA_DE_RELOJ, caben_horas
+
+    assert CUOTA_POR_HORA_DE_RELOJ > 1.0, "si fuera 1.0 volveriamos a creer que 30 h son 30 h"
+
+    # las 30 h semanales NO son 30 h de reloj
+    assert caben_horas(30.0) < 18.0
+    # sin cuota, no cabe nada
+    assert caben_horas(0.0) == 0.0
+    # y la que quedaba aquel dia no daba para la tirada que se lanzo
+    assert caben_horas(14.56) < 10.6, "con 14,56 h de cuota no caben 10,6 h de reloj"
+
+
+def test_el_lanzador_aborta_si_la_cuota_no_alcanza(tmp_path):
+    # La comprobacion tiene que estar ANTES del push, no despues: si se empuja el kernel y
+    # luego se descubre, la corrida ya esta consumiendo.
+    import inspect
+
+    sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
+    import lanzar
+
+    fuente = inspect.getsource(lanzar.main)
+    pos_cuota = fuente.find("lee_cuota()")
+    pos_push = fuente.find('"kernels", "push"')
+    assert pos_cuota != -1, "el lanzador no mira la cuota"
+    assert pos_push != -1
+    assert pos_cuota < pos_push, "la cuota se comprueba DESPUES de empujar el kernel"
+    assert "return 2" in fuente

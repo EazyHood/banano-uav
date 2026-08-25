@@ -257,6 +257,8 @@ def main() -> int:
     ap.add_argument("--encadenar", action="store_true",
                     help="sube el last.pt recogido y lo engancha, para que la siguiente "
                          "sesión continúe en vez de empezar de cero")
+    ap.add_argument("--forzar", action="store_true",
+                    help="lanza aunque la cuota no alcance")
     ap.add_argument("--log", action="store_true", help="enseña el log de la corrida (sin descargar la salida)")
     ap.add_argument("--destino", type=Path, default=AQUI.parent / "runs_cloud" / "kaggle")
     args = ap.parse_args()
@@ -296,6 +298,23 @@ def main() -> int:
 
     if args.encadenar:
         return encadenar(user, args.destino)
+
+    # Alcanza la cuota? Lanzar sin mirarla es lo que costo la tirada del 24 de
+    # agosto: 10,6 h de reloj pedidas con 14,6 h de cuota libres, y Kaggle la
+    # cancelo a mitad. La cuota se gasta ~1,7x el reloj porque asigna dos T4.
+    from cuota import caben_horas
+    from cuota import lee as lee_cuota
+
+    q = lee_cuota()
+    if q:
+        usadas, libres = q
+        caben = caben_horas(libres)
+        print(f"Cuota GPU: {usadas:.2f} h usadas, {libres:.2f} h libres"
+              f" -> caben ~{caben:.1f} h de reloj")
+        if caben < 1.0 and not args.forzar:
+            for _linea in ('NO HAY CUOTA para una tirada util: Kaggle la cancelaria a mitad.', 'Se renueva el sabado a medianoche UTC. Detalle: python kaggle/cuota.py', 'Si aun asi quieres lanzarla: --forzar'):
+                print(_linea, file=sys.stderr)
+            return 2
 
     # Regenerar el notebook para que lo que se sube sea lo que está en el repo
     subprocess.run([sys.executable, str(AQUI / "build_notebook.py")], check=True)
