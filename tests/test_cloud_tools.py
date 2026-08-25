@@ -867,3 +867,16 @@ def test_el_arranque_avisa_si_la_vram_no_llega():
     from arranque import VRAM_MINIMA_GB
 
     assert VRAM_MINIMA_GB >= 12.0
+
+
+def test_el_arranque_instala_ultralytics_antes_de_mirar_la_gpu():
+    # En una maquina prestada ultralytics casi nunca viene, y torch a veces tampoco. Si se
+    # mira la GPU primero, revisa_gpu() solo puede decir "torch no esta instalado", que no
+    # ayuda. Instalar primero deja que el aviso siguiente sea el de verdad.
+    import inspect
+
+    sys.path.insert(0, os.path.join(RAIZ, "cloud"))
+    import arranque
+
+    fuente = inspect.getsource(arranque.main)
+    assert fuente.index("asegura_ultralytics") < fuente.index("revisa_gpu")

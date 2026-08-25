@@ -50,6 +50,35 @@ def corre(cmd: list[str | Path], donde: Path = ROOT) -> int:
     return subprocess.run([str(c) for c in cmd], cwd=str(donde)).returncode
 
 
+def asegura_ultralytics() -> bool:
+    """Instala ultralytics si falta. En una máquina prestada casi nunca viene.
+
+    Se hace ANTES de mirar la GPU a propósito: si torch tampoco está, ultralytics lo trae,
+    y revisa_gpu() necesita torch para decir algo útil en vez de "no está instalado".
+    """
+    try:
+        import ultralytics  # noqa: F401
+
+        print("  ultralytics ya está", flush=True)
+    except ImportError:
+        print("  instalando ultralytics (tarda un par de minutos)...", flush=True)
+        r = subprocess.run([sys.executable, "-m", "pip", "install", "-q", "ultralytics"])
+        if r.returncode != 0:
+            print("  falló la instalación de ultralytics", file=sys.stderr)
+            return False
+    # Telemetría y loggers externos fuera: en una corrida desatendida cualquiera de ellos
+    # puede quedarse esperando un login que nadie va a teclear.
+    try:
+        from ultralytics import settings
+
+        settings.update(dict.fromkeys(
+            ("sync", "wandb", "clearml", "comet", "dvc", "mlflow", "neptune", "raytune"), False
+        ))
+    except Exception:
+        pass
+    return True
+
+
 def revisa_gpu() -> tuple[bool, float]:
     try:
         import torch
@@ -87,9 +116,13 @@ def main() -> int:
     args = ap.parse_args()
 
     t0 = time.time()
-    TOTAL = 5
+    TOTAL = 6
 
-    paso(1, TOTAL, "GPU")
+    paso(1, TOTAL, "dependencias")
+    if not asegura_ultralytics():
+        return 1
+
+    paso(2, TOTAL, "GPU")
     hay_gpu, vram = revisa_gpu()
     if not hay_gpu:
         print("\n  Sin GPU esto tardaría días. Instala torch con CUDA o cambia de máquina.",
@@ -100,7 +133,7 @@ def main() -> int:
         batch = 4
         print(f"  AVISO: {vram:.1f} GB es poco para {args.imgsz} px; se baja el lote a 4.")
 
-    paso(2, TOTAL, f"datos de Roboflow -> {args.datos}")
+    paso(3, TOTAL, f"datos de Roboflow -> {args.datos}")
     if args.salta_descarga:
         print("  saltado a petición")
     else:
@@ -112,13 +145,13 @@ def main() -> int:
         if args.nuevas:
             corre(cmd + ["--nuevas"])
 
-    paso(3, TOTAL, f"repartir por finca -> {args.splits}")
+    paso(4, TOTAL, f"repartir por finca -> {args.splits}")
     if corre([sys.executable, ROOT / "cloud" / "make_splits.py",
               "--raiz", args.datos, "--salida", args.splits,
               "--raiz-declarada", args.datos]) != 0:
         return 1
 
-    paso(4, TOTAL, "comprobar fugas antes de entrenar")
+    paso(5, TOTAL, "comprobar fugas antes de entrenar")
     # Si una imagen de validación está en el entrenamiento, la cifra final no vale nada y
     # más vale saberlo ANTES de gastar las horas, no después.
     for yaml in sorted(args.splits.glob("lofo_*.yaml")):
@@ -129,7 +162,7 @@ def main() -> int:
         linea = next((ln.strip() for ln in r.stdout.splitlines() if "TOTAL" in ln), "?")
         print(f"  {yaml.name:28s} {linea}")
 
-    paso(5, TOTAL, f"entrenar {args.data} durante {args.horas} h como mucho")
+    paso(6, TOTAL, f"entrenar {args.data} durante {args.horas} h como mucho")
     cmd = [sys.executable, ROOT / "cloud" / "train.py",
            "--data", args.splits / args.data,
            "--receta", args.receta, "--modelo", args.modelo,
