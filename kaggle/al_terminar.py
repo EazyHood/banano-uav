@@ -110,7 +110,7 @@ def main() -> int:
         # `-WindowStyle Hidden` y la casilla "Oculta" del Programador no valen: la
         # primera actúa tarde, la segunda oculta la tarea en la lista, no la ventana.
         # Medido el 2026-08-25: sin envoltorio 1 ventana por pasada, con él 0.
-        conhost = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "conhost.exe"
+        conhost = Path(os.environ.get("SYSTEMROOT", r"C:\Windows")) / "System32" / "conhost.exe"
         cmd = f'"{conhost}" --headless "{sys.executable}" "{Path(__file__).resolve()}"'
         r = subprocess.run(
             ["schtasks", "/Create", "/TN", TAREA, "/TR", cmd,
