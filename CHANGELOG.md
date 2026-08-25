@@ -68,6 +68,46 @@ aparecieron tres defectos de medición que estaban tapados.
   A 1024 px el modelo predice 295 de 1.378 plantas reales (-78,6 %, frente a -84,5 % a 768).
   Sin etiquetar algo de la finca destino, no hay producto de conteo.
 
+### Primera tirada completa en la nube — 2026-08-24
+
+Terminó la primera corrida de verdad en Kaggle (2× Tesla T4, receta `escala`, 1024 px, todas
+las fincas). Registro auditable en `real_eval/cloud_v13_todas_las_fincas_escala_1024.json` y
+la curva entera en el `.csv` de al lado. Lo que enseñó, que es más que el modelo:
+
+- **Cifras, y de qué son:** mAP50 **0.7139**, mAP50-95 0.3089, precisión 0.8176, recall
+  0.6617. Es **dentro de distribución**: `todas_las_fincas.yaml` entrena con las siete fincas
+  y valida en el split `valid` de cada una. **No dice nada sobre finca nueva**, que es la
+  pregunta abierta del proyecto; para eso hace falta una tirada LOFO. Se publica así de
+  claro para no repetir lo de v12, que ganaba sólo donde entrenaba.
+- **La parada temprana se comió 4,2 h del presupuesto.** Con 10,53 h reservadas, la tirada
+  murió a las 6,3 h en la época 28 porque `patience=20` contaba desde la época 8. Y la época
+  8 ganó por la métrica, no por el modelo: la *fitness* de ultralytics es
+  `0.1*mAP50 + 0.9*mAP50-95`, y esa época tuvo un pico de mAP50-95 de 0,307 entre vecinas de
+  0,18-0,26. La época 28 detectaba **más** (mAP50 0,753 frente a 0,713) y la curva seguía
+  subiendo. Corregido: con `--horas`, la parada temprana se **desactiva** salvo que se pida
+  a mano — el reloj ya acota la tirada y la sesión de nube se paga entera igual.
+
+### Corregido (herramientas de la nube) — 2026-08-24
+- **`--recoger` decía «0 ficheros» con 40 MB de pesos guardados.** `kaggle kernels output`
+  mira la **sesión**, no la versión: basta una pestaña del editor abierta —la que abre el
+  correo de «tu notebook ha terminado»— para que devuelva cero, y sin explicar por qué.
+  Ahora, si esa vía viene vacía, se bajan los ficheros uno a uno por su ruta (otro endpoint,
+  ése sí ve la versión) y se avisa por pantalla de lo que está pasando.
+- **Las rutas las escribe ahora el notebook** (`resultados/MANIFIESTO.json`): el endpoint que
+  lista la salida de una versión devuelve sólo el nombre del fichero, sin carpeta, así que
+  `cloud_runs.json` aparecía dos veces y no había forma de saber cuál era cuál.
+- **Una pestaña abierta consume cuota igual que un entrenamiento**: medido, 120,4 s de cuota
+  por cada 121 s de reloj sin nada corriendo. Queda avisado en `kaggle/README.md`.
+
+### Añadido (herramientas de la nube) — 2026-08-24
+- **`lanzar.py --encadenar`** — sube el `last.pt` recogido al dataset **privado**
+  `banano-uav-pesos` con su `args.yaml`, y lo engancha al notebook. Sin esto, cada sesión
+  reentrena desde cero porque `/kaggle/working` arranca vacío, y con 30 h de cuota semanal
+  eso es la diferencia entre encadenar cuatro sesiones y repetir la primera cuatro veces.
+  Era el único paso que quedaba obligando a ir al navegador.
+- 6 pruebas nuevas, validadas por mutación (incluida una que impide que el dataset de pesos
+  se suba público: en el CLI de Kaggle `-u` es `--public`, no `--update`).
+
 ## [2.2.0] — 2026-08-09 / 2026-08-11
 
 El tema de esta versión es **medir de verdad**: el repo ya traía un modelo multi-finca del

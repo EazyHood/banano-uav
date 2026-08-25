@@ -584,3 +584,104 @@ def test_el_entrenamiento_valida_con_el_mismo_max_det_que_la_evaluacion():
     fuente = inspect.getsource(train.entrena)
     assert "max_det=args.max_det" in fuente, "train() no pasa max_det a modelo.train()"
     assert train.MAX_DET >= 1000
+
+
+def test_con_tope_de_horas_la_parada_temprana_no_manda():
+    # Medido en Kaggle el 2026-08-24: presupuesto 10,53 h, la tirada murio a las 6,3 h en
+    # la epoca 28 porque la paciencia por defecto (20) conto desde la epoca 8. Con un tope
+    # de horas la parada temprana no ahorra NADA —la sesion de nube se paga entera— y solo
+    # puede tirar tiempo ya comprado: 4,2 h en esa corrida.
+    from cloud.train import paciencia_efectiva
+
+    assert paciencia_efectiva(None, 10.53) == 0     # 0 = float("inf") en torch_utils.py:1003
+    assert paciencia_efectiva(None, None) == 20     # sin reloj, la parada temprana si sirve
+    assert paciencia_efectiva(5, 10.53) == 5        # pedirla a mano sigue mandando
+    assert paciencia_efectiva(0, None) == 0
+    assert paciencia_efectiva(-3, None) == 0        # nada de paciencias negativas
+
+
+def test_el_mejor_no_se_elige_por_mAP50_sino_por_una_fitness_que_es_90_por_ciento_mAP50_95():
+    # Por que la epoca 8 gano a la 28 aun teniendo MENOS mAP50: ultralytics puntua con
+    # 0.1*mAP50 + 0.9*mAP50-95 (utils/metrics.py, DetMetrics.fitness). Con los numeros
+    # reales de results.csv de la corrida del 2026-08-24, la 8 gana por un pico de
+    # mAP50-95 (0,307 entre vecinas de 0,18-0,26) y ese pico ademas arranco el contador
+    # de la paciencia. Es la razon de que un tope de horas y una paciencia corta se lleven
+    # mal: la metrica que decide es la mas ruidosa de las dos.
+    def fitness(mAP50, mAP50_95):
+        return 0.1 * mAP50 + 0.9 * mAP50_95
+
+    ep8 = fitness(0.71289, 0.30719)
+    ep28 = fitness(0.75263, 0.24753)
+    assert ep8 > ep28                    # gana la 8, aunque...
+    assert 0.75263 > 0.71289             # ...la 28 detecta mas
+    assert 28 - 8 >= 20                  # y por eso salto la paciencia de 20
+
+
+def test_recoger_reconstruye_la_carpeta_que_la_api_de_kaggle_no_devuelve():
+    # El endpoint que lista los ficheros de una VERSION da solo el nombre: `cloud_runs.json`
+    # aparece dos veces, con tamanos distintos, porque son dos ficheros en dos carpetas. Y
+    # el endpoint que si da rutas mira la SESION, asi que con una pestana del editor abierta
+    # contesta cero. Sin esta reconstruccion, `--recoger` decia "0 ficheros de pesos" con
+    # 40 MB guardados. Medido el 2026-08-24.
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "lanzar_kaggle", pathlib.Path(RAIZ) / "kaggle" / "lanzar.py"
+    )
+    lanzar = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(lanzar)
+
+    rutas = lanzar.rutas_probables(
+        ["cloud_runs.json", "cloud_runs.json", "todas_las_fincas_escala_yolo11m_1024_best.pt"]
+    )
+
+    # el last.pt es el que permite REANUDAR: si no se baja, la sesion siguiente reempieza
+    assert "runs/todas_las_fincas_escala_yolo11m_1024/weights/last.pt" in rutas
+    assert "runs/todas_las_fincas_escala_yolo11m_1024/args.yaml" in rutas  # va con el last.pt
+    assert "resultados/todas_las_fincas_escala_yolo11m_1024_best.pt" in rutas
+    # el nombre repetido se prueba en las dos carpetas, pero no dos veces
+    assert rutas.count("resultados/cloud_runs.json") == 1
+    assert "cloud_runs.json" in rutas
+    assert len(rutas) == len(set(rutas))
+
+
+def test_el_notebook_deja_escritas_las_rutas_de_lo_que_guarda():
+    # La API no las da (ver la prueba de arriba), asi que las escribe el propio notebook.
+    celdas = _notebook()
+    todo = "\n".join(celdas)
+    assert "MANIFIESTO.json" in todo
+    assert "os.walk(WORK)" in todo
+
+
+def test_el_notebook_sabe_reanudar_por_las_dos_vias():
+    # /kaggle/working arranca vacio en cada corrida: sin reanudacion, cada sesion reentrena
+    # desde cero y las 6,3 h de la anterior no suman. Con 30 h de cuota semanal eso es la
+    # diferencia entre encadenar cuatro sesiones o repetir la primera cuatro veces.
+    celdas = _notebook()
+    todo = "\n".join(celdas)
+
+    # a) la salida de la version anterior, adjuntada como Notebook Output desde la web
+    assert "/kaggle/input/**/runs/**/weights/last.pt" in todo
+    # b) el dataset plano que sube `lanzar.py --encadenar`, sin tocar el navegador
+    assert "/kaggle/input/*/origen.json" in todo
+    # y en las dos, el args.yaml viaja con el last.pt: ultralytics lo necesita para
+    # reanudar con la misma receta
+    assert todo.count("args.yaml") >= 3
+
+
+def test_el_dataset_de_pesos_no_se_sube_publico():
+    # `kaggle datasets create -u` significa --public, no --update. Son pesos entrenados
+    # sobre datos con licencia de terceros y de una tirada a medias: van privados, que es
+    # el default. Un flag de una letra mal leido los publicaria sin avisar.
+    import importlib.util
+    import inspect
+
+    spec = importlib.util.spec_from_file_location(
+        "lanzar_kaggle_pub", pathlib.Path(RAIZ) / "kaggle" / "lanzar.py"
+    )
+    lanzar = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(lanzar)
+
+    fuente = inspect.getsource(lanzar.encadenar)
+    assert '"-u"' not in fuente and "'-u'" not in fuente
+    assert '"--public"' not in fuente

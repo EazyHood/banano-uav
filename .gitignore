@@ -16,6 +16,8 @@ dataset/
 runs/
 runs[0-9]*/
 runs_pose/
+runs_cloud/
+kaggle/pesos/
 benchmark*.json
 quickstart_out/
 *.pt

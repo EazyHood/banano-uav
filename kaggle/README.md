@@ -91,6 +91,17 @@ python kaggle/lanzar.py --recoger
 
 Los deja en `runs_cloud/kaggle/`.
 
+⚠️ **Si acabas de abrir el notebook en la web, ciérralo antes.** La API de Kaggle que
+devuelve rutas de ficheros mira la **sesión**, no la versión guardada: con una pestaña del
+editor abierta —la que abre el propio correo de «tu notebook ha terminado» al pulsar *View
+on Kaggle*— contesta *cero ficheros*. El 2026-08-24 eso hizo que `--recoger` dijera que no
+había nada justo después de una tirada de 6,3 h con 40 MB de pesos guardados. Ahora, si esa
+vía viene vacía, se bajan uno a uno por su ruta y se avisa por pantalla.
+
+Y esa pestaña abierta **no es gratis**: mientras esté abierta con GPU, consume cuota al
+mismo ritmo que un entrenamiento. Medido: 120,4 s de cuota por cada 121 s de reloj, sin
+nada corriendo.
+
 ---
 
 ## Lo que hace el notebook, por orden
@@ -129,16 +140,23 @@ siempre cabe, entrene lo que entrene.
 ### Encadenar sesiones (entrenar más de 12 h en total)
 
 `/kaggle/working` **arranca vacío en cada corrida**: «Save & Run All» crea una sesión limpia,
-así que el `last.pt` de la sesión anterior no está ahí y no se reanuda nada por sí solo. Lo
-que sí sobrevive es la **salida de la versión anterior**, si se la adjuntas como fuente:
+así que el `last.pt` de la sesión anterior no está ahí y no se reanuda nada por sí solo.
+Sin encadenar, cada sesión reentrena desde el principio y las horas anteriores no suman.
 
-1. Abre el notebook en la web → panel derecho, `+ Add Input` → pestaña **Notebook Output** →
-   busca `banano-uav-entrenar` y añade su última versión.
-2. Vuelve a lanzar. La celda 8 busca los `last.pt` en `/kaggle/input/`, los copia a
-   `/kaggle/working/runs/` con su `args.yaml`, y `cloud/train.py` continúa desde ahí en vez
-   de empezar de cero.
+```bash
+python kaggle/lanzar.py --recoger     # baja el last.pt de la corrida anterior
+python kaggle/lanzar.py --encadenar   # lo sube como dataset privado y lo engancha
+python kaggle/lanzar.py               # la siguiente corrida continúa desde ahí
+```
 
-Sin ese paso, cada sesión reentrena desde el principio y las horas anteriores no suman.
+`--encadenar` sube `last.pt`, su `args.yaml` (ultralytics lo necesita para reanudar con la
+misma receta) y un `origen.json` que dice a qué tirada pertenecen, al dataset **privado**
+`banano-uav-pesos`, y lo añade a `dataset_sources` del notebook. Los ficheros van planos a
+propósito: subir carpetas obliga a `--dir-mode zip` y entonces depende de si Kaggle
+desempaqueta el zip.
+
+La otra vía, por si prefieres el navegador: `+ Add Input` → pestaña **Notebook Output** →
+`banano-uav-entrenar`, su última versión. La celda 8 entiende las dos.
 
 Referencias de tiempo, medidas en las corridas anteriores de este proyecto:
 `v10` (60 épocas, 768 px) tardó 4,2 h; `v12` (74 épocas, 768 px) 10,3 h; y `v11` a 1024 px

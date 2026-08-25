@@ -9,7 +9,8 @@
   "enable_tpu": "false",
   "enable_internet": "true",
   "dataset_sources": [
-    "jhonatandelriomejia/banano-uav-credenciales"
+    "jhonatandelriomejia/banano-uav-credenciales",
+    "jhonatandelriomejia/banano-uav-pesos"
   ],
   "competition_sources": [],
   "kernel_sources": [],

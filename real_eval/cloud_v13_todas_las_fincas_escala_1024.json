@@ -1,0 +1,67 @@
+{
+  "tiradas": [
+    {
+      "data": "todas_las_fincas.yaml",
+      "receta": "escala",
+      "receta_hiper": {
+        "degrees": 180.0,
+        "flipud": 0.5,
+        "scale": [
+          0.25,
+          2.5
+        ],
+        "multi_scale": true,
+        "hsv_h": 0.02,
+        "hsv_s": 0.8,
+        "hsv_v": 0.5,
+        "mosaic": 1.0,
+        "close_mosaic": 10,
+        "time": 10.53
+      },
+      "modelo_base": "yolo11m.pt",
+      "imgsz": 1024,
+      "epochs": 300,
+      "horas_tope": 10.53,
+      "batch": 8,
+      "workers": 8,
+      "device": "0",
+      "max_det": 1000,
+      "entorno": {
+        "so": "Linux",
+        "python": "3.12.13",
+        "torch": "2.10.0+cu128",
+        "cuda": true,
+        "gpus": 2,
+        "gpu_nombre": "Tesla T4",
+        "vram_gb": 14.6
+      },
+      "minutos": 378.9,
+      "pesos": "/kaggle/working/runs/todas_las_fincas_escala_yolo11m_1024/weights/best.pt",
+      "metricas": {
+        "mAP50": 0.7139,
+        "mAP50_95": 0.3089,
+        "precision": 0.8176,
+        "recall": 0.6617
+      },
+      "nota": "Primera tirada completa en Kaggle (2× Tesla T4, 2026-08-24). NO mide generalizacion: todas_las_fincas.yaml entrena con las 7 fincas y valida en el split 'valid' de cada una, asi que estas cifras son dentro de distribucion. La comparacion honesta contra v10 exige una tirada LOFO. Se para en la epoca 28 de un presupuesto de 10,53 h por la parada temprana (patience 20 contando desde la epoca 8), gastando solo 6,3 h: 4,2 h del presupuesto quedaron sin usar y la curva aun subia.",
+      "epocas_completadas": 28,
+      "mejor_epoca": 8,
+      "parada": "temprana (patience 20); el tope de horas no llego a activarse",
+      "por_epoca": {
+        "mejor": {
+          "epoch": 8,
+          "mAP50": 0.71289,
+          "mAP50_95": 0.30719,
+          "recall": 0.66168
+        },
+        "ultima": {
+          "epoch": 28,
+          "mAP50": 0.75263,
+          "mAP50_95": 0.24753,
+          "recall": 0.71931
+        }
+      },
+      "fitness_ultralytics": "0.1*mAP50 + 0.9*mAP50-95 (utils/metrics.py)"
+    }
+  ]
+}

@@ -145,6 +145,26 @@ def decide(info: dict[str, Any], batch: int | None, workers: int | None) -> tupl
     return device, batch, workers
 
 
+def paciencia_efectiva(patience: int | None, horas: float | None) -> int:
+    """Épocas sin mejorar antes de cortar. 0 = no cortar nunca (torch_utils.py:1003).
+
+    Con --horas el RELOJ ya acota la tirada, y ahí la parada temprana no puede ahorrar
+    nada: la sesión de nube se paga entera se use o no. Sólo puede quitar tiempo ya
+    pagado. Medido en Kaggle el 2026-08-24, con la paciencia por defecto de 20:
+
+        presupuesto 10,53 h  ->  murió a las 6,3 h, en la época 28, con 4,2 h sin usar
+
+    y el "mejor" que dejó fue la época 8, elegida por una fitness que es 90% mAP50-95
+    (metrics.py: 0.1*mAP50 + 0.9*mAP50-95). Esa época tuvo un pico de mAP50-95 de 0,307
+    entre vecinas de 0,18-0,26; la 28 tenía MÁS mAP50 (0,753 frente a 0,713) y aún subía.
+    O sea que la parada temprana cortó una tirada que mejoraba, midiendo el pico de una
+    métrica ruidosa. Con tope de horas se desactiva salvo que se pida a mano.
+    """
+    if patience is not None:
+        return max(0, patience)
+    return 0 if horas else 20
+
+
 def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: dict[str, Any]) -> dict[str, Any]:
     from ultralytics import YOLO
 
@@ -157,6 +177,10 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
     punto = str(ultimo) if reanudar else args.modelo
     if reanudar:
         print(f"  reanudando desde {ultimo}")
+
+    pac = paciencia_efectiva(args.patience, args.horas)
+    if pac == 0:
+        print("  parada temprana DESACTIVADA: manda el tope de horas")
 
     hiper = {k: v for k, v in receta.items() if not k.startswith("_")}
 
@@ -182,7 +206,7 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
     modelo.train(
         data=str(data),
         epochs=args.epochs,
-        patience=args.patience,
+        patience=pac,
         imgsz=args.imgsz,
         batch=batch,
         workers=workers,
@@ -216,6 +240,7 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
         "imgsz": args.imgsz,
         "epochs": args.epochs,
         "horas_tope": args.horas,
+        "patience": pac,
         "batch": batch,
         "workers": workers,
         "device": device,
@@ -248,7 +273,9 @@ def main() -> int:
     ap.add_argument("--epochs", type=int, default=80)
     ap.add_argument("--horas", type=float, default=None,
                     help="tope de horas; manda sobre --epochs y para solo al agotarse")
-    ap.add_argument("--patience", type=int, default=20)
+    ap.add_argument("--patience", type=int, default=None,
+                    help="épocas sin mejorar antes de cortar; 0 desactiva. Por defecto, "
+                         "20 sin --horas y 0 con --horas (el reloj ya acota)")
     ap.add_argument("--batch", type=int, default=None, help="por defecto, según la VRAM")
     ap.add_argument("--workers", type=int, default=None, help="por defecto, 0 en Windows y 8 fuera")
     ap.add_argument("--semilla", type=int, default=0)

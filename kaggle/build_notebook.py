@@ -272,6 +272,26 @@ for prev in _glob.glob("/kaggle/input/**/runs/**/weights/last.pt", recursive=Tru
         if os.path.exists(args_prev):
             _shutil.copy2(args_prev, os.path.join(os.path.dirname(os.path.dirname(destino)), "args.yaml"))
         copiados += 1
+
+# Y la via PLANA, que es la que monta `lanzar.py --encadenar` desde la terminal: un dataset
+# privado con last.pt suelto y un origen.json que dice a que tirada pertenece. Se sube plano
+# a proposito: con carpetas haria falta --dir-mode zip y entonces todo depende de si Kaggle
+# desempaqueta el zip o lo deja tal cual.
+for meta in _glob.glob("/kaggle/input/*/origen.json"):
+    carpeta = os.path.dirname(meta)
+    nombre_run = (json.load(open(meta)) or {}).get("run")
+    fuente = os.path.join(carpeta, "last.pt")
+    if not nombre_run or not os.path.exists(fuente):
+        continue
+    destino = f"{WORK}/runs/{nombre_run}/weights/last.pt"
+    os.makedirs(os.path.dirname(destino), exist_ok=True)
+    if not os.path.exists(destino):
+        _shutil.copy2(fuente, destino)
+        args_prev = os.path.join(carpeta, "args.yaml")
+        if os.path.exists(args_prev):
+            _shutil.copy2(args_prev, f"{WORK}/runs/{nombre_run}/args.yaml")
+        copiados += 1
+
 print(f"pesos recuperados de una sesion anterior: {copiados}"
       if copiados else "sin pesos previos: se entrena desde cero")
 
@@ -319,6 +339,20 @@ for j in ("cloud_runs.json", "scale_sweep.json"):
 for csv in glob.glob(f"{WORK}/runs/**/results.csv", recursive=True):
     etiqueta = csv.split("/runs/")[1].split("/results")[0].replace("/", "_")
     shutil.copy2(csv, f"{SALIDA}/{etiqueta}_results.csv")
+
+# Un indice de TODO lo guardado, con su ruta relativa dentro de /kaggle/working. Hace
+# falta porque la API de Kaggle no da las rutas: la que lista la salida de una VERSION
+# devuelve solo el nombre del fichero, sin carpeta, y la que si da rutas mira la SESION,
+# asi que con una pestana del editor abierta contesta "0 ficheros" aunque la version
+# tenga 40 MB de pesos dentro. Medido el 2026-08-24: `lanzar.py --recoger` dijo que no
+# habia nada justo despues de una tirada de 6,3 h que si habia guardado.
+manifiesto = sorted(
+    os.path.relpath(os.path.join(dp, f), WORK).replace(os.sep, "/")
+    for dp, _, fs in os.walk(WORK) for f in fs
+)
+with open(f"{SALIDA}/MANIFIESTO.json", "w") as fh:
+    json.dump({"ficheros": manifiesto}, fh, indent=1)
+print(f"MANIFIESTO.json: {len(manifiesto)} rutas")
 
 # El clon vive en el scratch, asi que no ensucia la salida ni aunque esto no se ejecute.
 print(f"\\nlisto en {(time.time()-T0)/3600:.2f} h")
