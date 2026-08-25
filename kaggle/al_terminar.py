@@ -104,7 +104,14 @@ def main() -> int:
         return r.returncode
 
     if args.instalar:
-        cmd = f'"{sys.executable}" "{Path(__file__).resolve()}"'
+        # Envuelto en `conhost --headless` a propósito. Sin él, el Programador de
+        # tareas lanza python.exe con la ventana VISIBLE, y cada 30 minutos aparece
+        # una consola negra que roba el foco y saca del juego a pantalla completa.
+        # `-WindowStyle Hidden` y la casilla "Oculta" del Programador no valen: la
+        # primera actúa tarde, la segunda oculta la tarea en la lista, no la ventana.
+        # Medido el 2026-08-25: sin envoltorio 1 ventana por pasada, con él 0.
+        conhost = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "conhost.exe"
+        cmd = f'"{conhost}" --headless "{sys.executable}" "{Path(__file__).resolve()}"'
         r = subprocess.run(
             ["schtasks", "/Create", "/TN", TAREA, "/TR", cmd,
              "/SC", "MINUTE", "/MO", "30", "/F"],
