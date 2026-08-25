@@ -24,7 +24,9 @@ que "ha entrenado mucho".
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -52,10 +54,36 @@ def estado(kid: str) -> str:
     return "DESCONOCIDO"
 
 
-def escribe(texto: str) -> None:
+def avisa(titulo: str, cuerpo: str) -> None:
+    """Notificación en el área de notificación de Windows.
+
+    Hace falta porque el fichero del Escritorio no se ve solo: si nadie lo abre, el
+    resultado está pero nadie se entera. Se usa NotifyIcon de WinForms, que viene con
+    Windows y no exige instalar nada (BurntToast habría que instalarlo). Si falla —otro
+    sistema operativo, sesión no interactiva— no pasa nada: el fichero sigue escrito.
+    """
+    if os.name != "nt":
+        return
+    ps = (
+        "[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');"
+        "$n=New-Object System.Windows.Forms.NotifyIcon;"
+        "$n.Icon=[System.Drawing.SystemIcons]::Information;"
+        f"$n.BalloonTipTitle='{titulo}';"
+        f"$n.BalloonTipText='{cuerpo}';"
+        "$n.Visible=$true;$n.ShowBalloonTip(60000);Start-Sleep -Seconds 12;$n.Dispose()"
+    )
+    with contextlib.suppress(Exception):
+        subprocess.run(["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", ps],
+                       capture_output=True, timeout=40)
+
+
+def escribe(texto: str, titulo: str = "Banano: la corrida ha terminado") -> None:
     VEREDICTO.parent.mkdir(parents=True, exist_ok=True)
     VEREDICTO.write_text(texto, encoding="utf-8")
     print(f"veredicto -> {VEREDICTO}")
+    # la primera línea con contenido resume el veredicto
+    resumen = next((ln.strip("# *") for ln in texto.splitlines()[2:] if ln.strip()), "listo")
+    avisa(titulo, f"{resumen[:120]} -- detalle en el fichero BANANO-RESULTADO.md del Escritorio")
 
 
 def main() -> int:
