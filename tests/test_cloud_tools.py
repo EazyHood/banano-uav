@@ -831,3 +831,39 @@ def test_el_aviso_de_cancelacion_explica_la_cuota(tmp_path, monkeypatch):
     texto = destino.read_text(encoding="utf-8")
     assert "no fue la cuota" in texto.lower()
     assert "--log" in texto
+
+
+# ----------------------------------------------------------- arranque en otra maquina
+
+
+def test_el_arranque_no_depende_de_kaggle():
+    # El pipeline vivia dentro del notebook, y eso lo ataba a Kaggle: al agotarse la cuota
+    # el 25-ago no habia forma rapida de seguir en otra parte. cloud/arranque.py tiene que
+    # correr en cualquier maquina con GPU, asi que no puede mencionar rutas ni APIs de
+    # Kaggle.
+    fuente = (pathlib.Path(RAIZ) / "cloud" / "arranque.py").read_text(encoding="utf-8")
+    for prohibido in ("/kaggle/", "kaggle_secrets", "kernel-metadata"):
+        assert prohibido not in fuente, f"arranque.py depende de Kaggle: {prohibido}"
+
+
+def test_el_arranque_comprueba_las_fugas_antes_de_entrenar():
+    # Descubrir una fuga DESPUES de gastar las horas no sirve de nada: la cifra ya no vale y
+    # las horas ya se pagaron. El orden importa.
+    import inspect
+
+    sys.path.insert(0, os.path.join(RAIZ, "cloud"))
+    import arranque
+
+    fuente = inspect.getsource(arranque.main)
+    assert fuente.index("leak_audit") < fuente.index("train.py"), (
+        "comprueba las fugas despues de entrenar"
+    )
+
+
+def test_el_arranque_avisa_si_la_vram_no_llega():
+    # Un YOLO11m a 1024 px con lote 8 no cabe en 8 GB. Mejor bajar el lote que morir a las
+    # tres horas con un CUDA out of memory.
+    sys.path.insert(0, os.path.join(RAIZ, "cloud"))
+    from arranque import VRAM_MINIMA_GB
+
+    assert VRAM_MINIMA_GB >= 12.0
