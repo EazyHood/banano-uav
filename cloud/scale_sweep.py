@@ -87,6 +87,14 @@ def dispositivo() -> str:
 def barre(pesos: Path, data: Path, tamanos: list[int], device: str, conf: float, max_det: int) -> list[dict[str, Any]]:
     from ultralytics import YOLO
 
+    if str(ROOT) not in sys.path:  # ejecutado como script, la raíz del repo no está
+        sys.path.insert(0, str(ROOT))
+    from cloud.rutas import resuelve
+
+    # ultralytics no resuelve el `path:` relativo contra el YAML sino contra su propio
+    # datasets_dir, asi que los splits versionados no abren sin esto (medido 2026-08-24).
+    data = resuelve(data)
+
     filas: list[dict[str, Any]] = []
     for imgsz in tamanos:
         # ultralytics exige múltiplos del stride máximo (32)

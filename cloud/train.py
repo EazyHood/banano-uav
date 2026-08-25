@@ -166,10 +166,31 @@ def paciencia_efectiva(patience: int | None, horas: float | None) -> int:
 
 
 def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: dict[str, Any]) -> dict[str, Any]:
+    # multi_scale es una FRACCION de imgsz, no un interruptor. Poner True lo convierte en 1.0
+    # y los lotes se sortean entre 32 px y 2*imgsz: a imgsz 1024 eso son lotes de 2048 px con
+    # 4x las activaciones, y un CUDA out of memory en una epoca cualquiera. Peor aun, la
+    # reduccion automatica de batch de ultralytics solo actua en la PRIMERA epoca y en una
+    # sola GPU (trainer.py:522), asi que a partir de ahi no hay red y la sesion muere.
+    if isinstance(receta.get("multi_scale"), bool):
+        raise ValueError(
+            "multi_scale es una fraccion de imgsz (0.25 = +/-25%), no un booleano. "
+            "Con True se interpreta como 1.0 y sortea lotes de hasta 2*imgsz."
+        )
+
     from ultralytics import YOLO
 
+    if str(ROOT) not in sys.path:  # ejecutado como script, la raíz del repo no está
+        sys.path.insert(0, str(ROOT))
+    from cloud.rutas import resuelve
+
+    # Sin esto, un data.yaml con `path:` relativo no lo abre ultralytics: lo busca contra su
+    # propio datasets_dir y no contra el fichero. El nombre de la tirada se saca del yaml
+    # ORIGINAL, no del resuelto, para que no cambie segun donde se lance.
+    data_original = data
+    data = resuelve(data)
+
     device, batch, workers = decide(info, args.batch, args.workers)
-    nombre = args.nombre or f"{data.stem}_{args.receta}_{args.modelo.replace('.pt','')}_{args.imgsz}"
+    nombre = args.nombre or f"{data_original.stem}_{args.receta}_{args.modelo.replace('.pt','')}_{args.imgsz}"
     proyecto = args.proyecto
 
     ultimo = Path(proyecto) / nombre / "weights" / "last.pt"
@@ -183,17 +204,6 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
         print("  parada temprana DESACTIVADA: manda el tope de horas")
 
     hiper = {k: v for k, v in receta.items() if not k.startswith("_")}
-
-    # multi_scale es una FRACCION de imgsz, no un interruptor. Poner True lo convierte en 1.0
-    # y los lotes se sortean entre 32 px y 2*imgsz: a imgsz 1024 eso son lotes de 2048 px con
-    # 4x las activaciones, y un CUDA out of memory en una epoca cualquiera. Peor aun, la
-    # reduccion automatica de batch de ultralytics solo actua en la PRIMERA epoca y en una
-    # sola GPU (trainer.py:522), asi que a partir de ahi no hay red y la sesion muere.
-    if isinstance(hiper.get("multi_scale"), bool):
-        raise ValueError(
-            "multi_scale es una fraccion de imgsz (0.25 = +/-25%), no un booleano. "
-            "Con True se interpreta como 1.0 y sortea lotes de hasta 2*imgsz."
-        )
 
     if args.horas:
         # `time` de ultralytics manda sobre `epochs` y lo comprueba al final de cada epoca
@@ -233,7 +243,7 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
         max_det=args.max_det, verbose=False, plots=False,
     )
     resultado = {
-        "data": data.name,
+        "data": data_original.name,
         "receta": args.receta,
         "receta_hiper": hiper,
         "modelo_base": args.modelo,

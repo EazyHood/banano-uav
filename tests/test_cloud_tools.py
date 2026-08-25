@@ -442,6 +442,11 @@ def test_ningun_script_codifica_el_interprete_de_windows():
             if id(nodo) in docs:
                 continue
             v = nodo.value
+            # Un literal MULTILINEA es un mensaje para el usuario (que usa Windows), no una
+            # ruta de ejecucion. Lo que rompe fuera de Windows es construir el interprete
+            # asi en codigo, no enseñarle a el el comando que tiene que teclear.
+            if chr(10) in v:
+                continue
             if "python.exe" in v or v == "Scripts":
                 malos.append(f"{py.name}:{nodo.lineno}  ->  {v!r}")
     assert not malos, "codifican el interprete de Windows en CODIGO: " + "; ".join(malos)
@@ -710,10 +715,46 @@ def test_los_yaml_lofo_no_dejan_entrar_su_finca_en_el_train():
     import yaml as _yaml
 
     for y in sorted((pathlib.Path(RAIZ) / "splits").glob("lofo_*.yaml")):
-        finca = y.stem.replace("lofo_", "")
+        # el nombre de la finca sale del stem, pero lo que se compara son las rutas
         cfg = _yaml.safe_load(y.read_text(encoding="utf-8"))
         # 'original' vive en count_banana_plants y 'agromatica'/'tesis' agrupan varias
         # carpetas: se comprueba contra las rutas que el propio yaml pone en val
         carpetas_val = {v.rsplit("/", 2)[0] for v in cfg["val"]}
         for t in cfg["train"]:
             assert t.rsplit("/", 2)[0] not in carpetas_val, f"{y.name}: {t} esta en train Y en val"
+
+
+def test_un_yaml_con_path_relativo_se_resuelve_contra_el_propio_yaml(tmp_path):
+    # ultralytics NO resuelve el `path:` relativo contra el fichero YAML sino contra su
+    # propio datasets_dir. Medido el 2026-08-24 al intentar medir desde la raiz del repo:
+    #   Dataset 'splits/lofo_armah.yaml' images not found,
+    #   missing path 'C:\Users\jhona\realdata\newfarms\armah\train\images'
+    # o sea la raiz del repo subida un nivel de mas. En Kaggle no se veia porque alli se
+    # pasa una raiz absoluta; solo fallaba al usar los YAML versionados, que es justo lo
+    # que hace cualquiera que clone el repo.
+    import yaml as _yaml
+
+    from cloud.rutas import resuelve
+
+    datos = tmp_path / "realdata"
+    datos.mkdir()
+    splits = tmp_path / "splits"
+    splits.mkdir()
+    y = splits / "prueba.yaml"
+    y.write_text("path: ../realdata\ntrain:\n  - a/train/images\nval:\n  - a/valid/images\nnc: 1\n",
+                 encoding="utf-8")
+
+    resuelto = resuelve(y)
+    cfg = _yaml.safe_load(resuelto.read_text(encoding="utf-8"))
+    assert pathlib.Path(cfg["path"]).is_absolute()
+    assert pathlib.Path(cfg["path"]).resolve() == datos.resolve()
+    # y el fichero versionado NO se toca: sigue siendo portable
+    assert "path: ../realdata" in y.read_text(encoding="utf-8")
+
+
+def test_un_path_ya_absoluto_se_deja_en_paz(tmp_path):
+    from cloud.rutas import resuelve
+
+    y = tmp_path / "abs.yaml"
+    y.write_text(f"path: {tmp_path.as_posix()}\ntrain:\n  - a/train/images\nnc: 1\n", encoding="utf-8")
+    assert resuelve(y) == y
