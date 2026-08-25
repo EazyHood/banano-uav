@@ -246,7 +246,11 @@ if HACER_BARRIDO:
 IMGSZ  = 1024      # el barrido de arriba manda; si su optimo medio es otro, cambialo
 RECETA = "escala"  # v10 | cenital | escala   (ver cloud/train.py)
 MODELO = "yolo11m.pt"
-DATA   = f"{SPLITS}/todas_las_fincas.yaml"
+# lofo_armah y NO todas_las_fincas: aquel mete armah (su train y su test) en el
+# entrenamiento, asi que quema el holdout ciego del repo y el modelo resultante no se puede
+# comparar con v10 en la unica cifra que importa. Se mide primero con una finca fuera; el
+# modelo final con todos los datos se entrena DESPUES, cuando ya se sabe si la receta gana.
+DATA   = f"{SPLITS}/lofo_armah.yaml"
 
 # NO se fijan epocas: se fija TIEMPO. La primera corrida midio 6,6 s por iteracion con 329
 # iteraciones por epoca, o sea 36 min/epoca: 40 epocas habrian sido 24 h y la sesion muere a

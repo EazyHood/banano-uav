@@ -685,3 +685,35 @@ def test_el_dataset_de_pesos_no_se_sube_publico():
     fuente = inspect.getsource(lanzar.encadenar)
     assert '"-u"' not in fuente and "'-u'" not in fuente
     assert '"--public"' not in fuente
+
+
+def test_el_notebook_no_entrena_con_el_holdout_ciego_dentro():
+    # El 2026-08-24 la primera tirada en la nube uso todas_las_fincas.yaml, que mete
+    # newfarms/armah (su train Y su test) en el entrenamiento. armah es el holdout ciego del
+    # repo: la unica cifra que dice que pasa en una finca nueva. Entrenar con ella dentro no
+    # rompe nada, pero deja el modelo IMPOSIBLE de comparar con v10 en lo que importa, y esas
+    # 6,3 h de GPU no respondieron a la pregunta que las pagaba.
+    #
+    # El orden correcto es al reves: medir con una finca fuera (lofo_*), y entrenar el modelo
+    # final con todos los datos DESPUES, cuando ya se sabe si la receta gana.
+    celdas = _notebook()
+    todo = "\n".join(celdas)
+    assert "lofo_armah.yaml" in todo
+    assert "todas_las_fincas.yaml" not in todo, (
+        "el notebook volveria a entrenar con el holdout ciego dentro"
+    )
+
+
+def test_los_yaml_lofo_no_dejan_entrar_su_finca_en_el_train():
+    # La garantia del protocolo. Si un lofo_X mete X en el train, su cifra no vale nada y
+    # nadie se daria cuenta mirando el numero.
+    import yaml as _yaml
+
+    for y in sorted((pathlib.Path(RAIZ) / "splits").glob("lofo_*.yaml")):
+        finca = y.stem.replace("lofo_", "")
+        cfg = _yaml.safe_load(y.read_text(encoding="utf-8"))
+        # 'original' vive en count_banana_plants y 'agromatica'/'tesis' agrupan varias
+        # carpetas: se comprueba contra las rutas que el propio yaml pone en val
+        carpetas_val = {v.rsplit("/", 2)[0] for v in cfg["val"]}
+        for t in cfg["train"]:
+            assert t.rsplit("/", 2)[0] not in carpetas_val, f"{y.name}: {t} esta en train Y en val"
