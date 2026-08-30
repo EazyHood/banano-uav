@@ -880,3 +880,122 @@ def test_el_arranque_instala_ultralytics_antes_de_mirar_la_gpu():
 
     fuente = inspect.getsource(arranque.main)
     assert fuente.index("asegura_ultralytics") < fuente.index("revisa_gpu")
+
+
+# ----------------------------------------------------- el veredicto no se elige a si mismo
+
+
+def test_el_veredicto_sale_de_last_y_no_de_best(tmp_path, monkeypatch):
+    # En una tirada LOFO el `val` de ultralytics ES la finca ciega entera. Ninguna de sus
+    # imagenes entra en el entrenamiento, asi que la tirada es valida, pero `best.pt` es
+    # "la epoca que mejor puntuo EN ARMAH": elegir epoca mirando el holdout infla la cifra
+    # con la que se compara contra v10, que nunca vio armah. La misma trampa que este repo
+    # ya corrigio en eval_count.py, en version fina.
+    #
+    # Se monta el caso que separa las dos lecturas: best BATE la vara y last NO. Si el
+    # veredicto se decidiera por best diria que gana, y no gana.
+    sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
+    import al_terminar
+
+    raiz = tmp_path / "repo"
+    (raiz / "splits").mkdir(parents=True)
+    (raiz / "real_eval").mkdir()
+    pesos = raiz / "runs_cloud" / "kaggle_lofo" / "runs" / "lofo_armah" / "weights"
+    pesos.mkdir(parents=True)
+    (pesos / "best.pt").write_bytes(b"x" * 100)
+    (pesos / "last.pt").write_bytes(b"x" * 100)
+
+    barridos = {
+        "best": [{"imgsz": 1024, "mAP50": 0.4000, "recall": 0.3500, "precision": 0.80}],
+        "last": [{"imgsz": 1024, "mAP50": 0.2000, "recall": 0.1800, "precision": 0.70}],
+    }
+
+    def falso_run(cmd, **kw):
+        cmd = [str(c) for c in cmd]
+        if any("scale_sweep.py" in c for c in cmd):
+            # por el NOMBRE del fichero, no por la ruta: la carpeta que pytest crea para
+            # esta prueba lleva "last" dentro y hacia que los dos barridos salieran iguales
+            cual = pathlib.Path(cmd[cmd.index("--pesos") + 1]).stem
+            salida = pathlib.Path(cmd[cmd.index("--salida") + 1])
+            salida.write_text(
+                json.dumps({"fincas": {"lofo_armah": {"barrido": barridos[cual]}}}),
+                encoding="utf-8",
+            )
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(al_terminar, "ROOT", raiz)
+    monkeypatch.setattr(al_terminar, "VEREDICTO", tmp_path / "VEREDICTO.md")
+    monkeypatch.setattr(al_terminar, "estado", lambda kid: "COMPLETE")
+    monkeypatch.setattr(al_terminar, "avisa", lambda *a, **k: None)
+    monkeypatch.setattr(al_terminar.subprocess, "run", falso_run)
+    monkeypatch.setattr(sys, "argv", ["al_terminar.py", "--kernel", "u/k"])
+
+    assert al_terminar.main() == 0
+    texto = (tmp_path / "VEREDICTO.md").read_text(encoding="utf-8")
+
+    assert "NO SUPERA" in texto, "el veredicto se dejo convencer por el best.pt"
+    assert "0.2000" in texto, "no ensena la cifra de last.pt, que es la que decide"
+    assert "0.4000" in texto, "esconde la de best.pt, que hay que poder auditar"
+    assert "cota superior" in texto, "no avisa de que el best se eligio mirando armah"
+
+
+def test_apagar_la_telemetria_no_puede_tumbar_la_corrida(tmp_path):
+    # El 2026-08-29 la corrida murio a los 36 segundos, con la sesion de nube ya reservada,
+    # porque el notebook apagaba una lista fija de loggers y ultralytics habia quitado
+    # 'neptune' de sus ajustes: settings.update lanza KeyError con cualquier nombre que no
+    # reconozca. El notebook instala SIEMPRE la ultima version, asi que nombrar productos de
+    # terceros en duro es una bomba con temporizador.
+    #
+    # Se ejecuta el fragmento REAL del notebook contra unos ajustes a los que les falta esa
+    # clave. Comprobar que el fuente dice "defaults" no valdria: seguiria diciendolo aunque
+    # el filtro no se aplicara.
+    celdas = _notebook()
+    fuente = next(c for c in celdas if "APAGAR = " in c)
+    fragmento = fuente[fuente.index("APAGAR = "):]
+
+    class AjustesFalsos(dict):
+        def __init__(self):
+            super().__init__()
+            # sin 'neptune' ni 'raytune', como la version que rompio la corrida
+            self.defaults = {"sync": True, "wandb": True, "clearml": True,
+                             "comet": True, "dvc": True, "mlflow": True}
+
+        def update(self, otros):
+            for k in otros:
+                if k not in self.defaults:
+                    raise KeyError(f"No Ultralytics setting '{k}'.")
+            super().update(otros)
+
+    ajustes = AjustesFalsos()
+    salida = []
+    espacio = {
+        "settings": ajustes,
+        "ultralytics": type("mod", (), {"__version__": "9.9.9"}),
+        "print": lambda *a, **k: salida.append(" ".join(str(x) for x in a)),
+    }
+    exec(fragmento, espacio)  # noqa: S102 - es el codigo del notebook, ese es el objetivo
+
+    assert ajustes == dict.fromkeys(("sync", "wandb", "clearml", "comet", "dvc", "mlflow"), False)
+    assert "neptune" in salida[0], "no deja constancia de la clave que ya no existe"
+
+
+def test_el_log_no_muere_al_imprimir_lo_que_trae_kaggle(monkeypatch):
+    # `--log` es la herramienta de diagnostico, y el 2026-08-29 se rompio al usarla: la
+    # consola de Windows es cp1252 y el log de Kaggle trae las barras de pip (U+2501) y los
+    # emojis de ultralytics. print murio con UnicodeEncodeError y el motivo real de la
+    # caida quedo tapado por el fallo de la herramienta que iba a explicarlo.
+    import io
+
+    sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
+    import lanzar
+
+    consola = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", errors="strict")
+    monkeypatch.setattr(sys, "stdout", consola)
+    crudo = "━━━━ 46.0/46.0 kB | Settings ✅ | café"
+
+    consola.write(lanzar.imprimible(crudo))  # sin el saneado, esto lanza UnicodeEncodeError
+    consola.flush()
+    escrito = consola.buffer.getvalue().decode("cp1252")
+
+    assert "46.0/46.0 kB" in escrito, "se comio el texto util al sanear"
+    assert "café" in escrito, "cp1252 SI tiene acentos: no hay que perderlos"

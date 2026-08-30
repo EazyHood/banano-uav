@@ -30,6 +30,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 AQUI = Path(__file__).resolve().parent
 ROOT = AQUI.parent
@@ -174,8 +175,18 @@ def main() -> int:
     subprocess.run([sys.executable, str(AQUI / "lanzar.py"), "--recoger", "--destino", str(destino)],
                    cwd=str(ROOT))
 
-    pesos = sorted(destino.rglob("*best*.pt"))
-    if not pesos:
+    # DOS pesos, y el que manda es `last`. En el split LOFO el `val` de ultralytics ES
+    # armah entera: eso no mete ni una imagen suya en el entrenamiento, pero sí hace que
+    # `best.pt` sea la época que mejor puntuó EN ARMAH. Elegir época mirando el holdout es
+    # la misma trampa que este repo ya corrigió en eval_count.py (calibraba y reportaba
+    # sobre el mismo conjunto), sólo que más fina. `last.pt` es la última época y nadie la
+    # eligió, así que es la cifra comparable con v10, que nunca vio armah. `best.pt` se
+    # mide igual y se reporta como COTA OPTIMISTA, no como el resultado.
+    candidatos = {
+        "last": max(destino.rglob("*last*.pt"), key=lambda p: p.stat().st_size, default=None),
+        "best": max(destino.rglob("*best*.pt"), key=lambda p: p.stat().st_size, default=None),
+    }
+    if not any(candidatos.values()):
         escribe(
             "# Banano: la corrida terminó, pero no se recogieron pesos\n\n"
             "Suele pasar si hay una pestaña del notebook abierta en el navegador: la API de\n"
@@ -185,49 +196,73 @@ def main() -> int:
         )
         return 0
 
-    modelo = max(pesos, key=lambda p: p.stat().st_size)
     data = ROOT / "splits" / "lofo_armah.yaml"
-    salida = ROOT / "real_eval" / "lofo_armah_modelo_nuevo.json"
-    subprocess.run(
-        [sys.executable, str(ROOT / "cloud" / "scale_sweep.py"),
-         "--pesos", str(modelo), "--data", str(data),
-         "--imgsz", "768", "1024", "1280", "--salida", str(salida)],
-        cwd=str(ROOT),
-    )
+    medido: dict[str, list[dict[str, Any]]] = {}
+    rutas: dict[str, Path] = {}
+    for etiqueta, modelo in candidatos.items():
+        if modelo is None:
+            continue
+        salida = ROOT / "real_eval" / f"lofo_armah_modelo_nuevo_{etiqueta}.json"
+        subprocess.run(
+            [sys.executable, str(ROOT / "cloud" / "scale_sweep.py"),
+             "--pesos", str(modelo), "--data", str(data),
+             "--imgsz", "768", "1024", "1280", "--salida", str(salida)],
+            cwd=str(ROOT),
+        )
+        if salida.exists():
+            d = json.loads(salida.read_text(encoding="utf-8"))
+            medido[etiqueta] = next(iter(d["fincas"].values()))["barrido"]
+            rutas[etiqueta] = modelo
 
-    if not salida.exists():
+    if not medido:
         escribe(f"# Banano: pesos recogidos en `{destino}`, pero la medición falló\n")
         return 0
 
-    d = json.loads(salida.read_text(encoding="utf-8"))
-    filas = next(iter(d["fincas"].values()))["barrido"]
-    mejor = max(filas, key=lambda f: f["mAP50"])
-    gana = mejor["mAP50"] > VARA["mAP50"] and mejor["recall"] > VARA["recall"]
+    # El veredicto se juega a IGUAL resolución que la vara (1024 px). Coger el mejor imgsz
+    # del barrido sería volver a elegir mirando armah, y encima por partida doble.
+    def a_1024(filas: list[dict[str, Any]]) -> dict[str, Any]:
+        return min(filas, key=lambda f: abs(f["imgsz"] - 1024))
 
-    tabla = "\n".join(
-        f"| {f['imgsz']} | {f['mAP50']:.4f} | {f['recall']:.4f} | {f['precision']:.4f} |"
-        for f in filas
+    juez = medido.get("last") or medido["best"]
+    cual = "last" if "last" in medido else "best"
+    fila = a_1024(juez)
+    gana = fila["mAP50"] > VARA["mAP50"] and fila["recall"] > VARA["recall"]
+
+    tablas = "\n\n".join(
+        f"**`{etiqueta}.pt`** — `{rutas[etiqueta]}`\n\n"
+        "| imgsz | mAP50 | recall | precisión |\n|---:|---:|---:|---:|\n"
+        + "\n".join(
+            f"| {f['imgsz']} | {f['mAP50']:.4f} | {f['recall']:.4f} | {f['precision']:.4f} |"
+            for f in filas
+        )
+        for etiqueta, filas in medido.items()
     )
+    optimista = ""
+    if "best" in medido and cual == "last":
+        b = a_1024(medido["best"])
+        optimista = (
+            f"\n`best.pt` da {b['mAP50']:.4f} / {b['recall']:.4f} a 1024 px, pero esa época "
+            "se eligió puntuando en armah, que es justo el conjunto sobre el que se presume. "
+            "Es cota superior, no resultado.\n"
+        )
+
     escribe(f"""# Banano: resultado de la corrida en la nube
 
 **{'✅ EL MODELO NUEVO GANA' if gana else '❌ NO SUPERA AL QUE YA TIENES'}**
 
 Medido sobre `armah`, la finca que ningún modelo vio, con el modelo entrenado dejándola
-entera fuera. Es la comparación honesta.
+entera fuera, y a la misma resolución con la que se midió la vara.
 
 | | mAP50 | recall |
 |---|---:|---:|
 | v10 (el publicado, a 1024 px) | {VARA['mAP50']:.4f} | {VARA['recall']:.4f} |
-| **modelo nuevo** (a {mejor['imgsz']} px) | **{mejor['mAP50']:.4f}** | **{mejor['recall']:.4f}** |
+| **modelo nuevo** (`{cual}.pt`, a {fila['imgsz']} px) | **{fila['mAP50']:.4f}** | **{fila['recall']:.4f}** |
+{optimista}
+Barridos completos:
 
-Barrido completo del modelo nuevo:
+{tablas}
 
-| imgsz | mAP50 | recall | precisión |
-|---:|---:|---:|---:|
-{tabla}
-
-Pesos: `{modelo}`
-Medición: `{salida.relative_to(ROOT)}`
+Medición: `real_eval/lofo_armah_modelo_nuevo_*.json`
 
 {'Toca decidir si se publica: el número lo respalda.' if gana else
  'No se publica. Que haya entrenado muchas horas no es un argumento; la cifra en finca nueva es la que manda.'}

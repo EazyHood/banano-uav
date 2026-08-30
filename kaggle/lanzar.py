@@ -48,6 +48,20 @@ ACELERADOR = "NvidiaTeslaT4"  # NUNCA P100: la imagen de Kaggle no trae kernels 
 DATASET_PESOS = "banano-uav-pesos"  # dataset privado que encadena una sesión con la siguiente
 
 
+def imprimible(texto: str) -> str:
+    """El mismo texto, pero que la consola de destino pueda escribir sin morirse.
+
+    La consola de Windows abre en cp1252 y el log de Kaggle viene lleno de cosas que ahí
+    no existen: las barras de progreso de pip (━) y los ✅ de ultralytics. El 2026-08-29
+    `--log` murió con "'charmap' codec can't encode characters in position 2552-2591"
+    justo cuando había que diagnosticar por qué se había caído una corrida, y hubo que
+    repetirlo con PYTHONIOENCODING=utf-8. Un diagnóstico que se rompe al diagnosticar es
+    peor que no tenerlo: lo que no se pueda representar sale como '?', pero sale.
+    """
+    codificacion = getattr(sys.stdout, "encoding", None) or "utf-8"
+    return texto.encode(codificacion, errors="replace").decode(codificacion, errors="replace")
+
+
 def cli() -> str:
     exe = shutil.which("kaggle")
     if exe:
@@ -284,13 +298,13 @@ def main() -> int:
         try:
             eventos = json.loads(r.stdout)
         except json.JSONDecodeError:
-            print(r.stdout)
+            print(imprimible(r.stdout))
             return 0
         for e in eventos:
             texto = (e.get("data") or "").rstrip()
             if texto:
                 marca = "!" if e.get("stream_name") == "stderr" else " "
-                print(f"{marca} {texto}")
+                print(f"{marca} {imprimible(texto)}")
         return 0
 
     if args.recoger:

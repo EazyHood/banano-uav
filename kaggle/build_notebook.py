@@ -118,9 +118,19 @@ import ultralytics
 from ultralytics import settings
 # Telemetria y loggers externos fuera: en una sesion desatendida cualquiera de estos
 # puede quedarse esperando un login que nadie va a teclear.
-settings.update({k: False for k in
-                 ("sync", "wandb", "clearml", "comet", "dvc", "mlflow", "neptune", "raytune")})
-print("ultralytics", ultralytics.__version__)""",
+#
+# Se apagan SOLO las claves que esta version de ultralytics reconoce. `settings.update`
+# lanza KeyError con cualquier nombre que no este en sus defaults, y aqui se instala
+# siempre la ultima version: el 2026-08-29 quitaron 'neptune' y la corrida murio a los
+# 36 segundos con la sesion ya reservada. Una lista fija de nombres de terceros es una
+# bomba de relojeria; lo que no exista, ya esta apagado.
+APAGAR = ("sync", "wandb", "clearml", "comet", "dvc", "mlflow", "neptune", "raytune")
+conocidas = {k: False for k in APAGAR if k in settings.defaults}
+if conocidas:
+    settings.update(conocidas)
+ignoradas = sorted(set(APAGAR) - set(conocidas))
+print("ultralytics", ultralytics.__version__, "| apagados:", sorted(conocidas),
+      ("| ya no existen: " + ", ".join(ignoradas)) if ignoradas else "")""",
     ),
     (
         "code",
@@ -331,10 +341,14 @@ import glob, shutil
 SALIDA = f"{WORK}/resultados"
 os.makedirs(SALIDA, exist_ok=True)
 
-for pt in glob.glob(f"{WORK}/runs/**/weights/best.pt", recursive=True):
-    etiqueta = pt.split("/runs/")[1].split("/weights")[0].replace("/", "_")
-    shutil.copy2(pt, f"{SALIDA}/{etiqueta}_best.pt")
-    print("pesos ->", f"{etiqueta}_best.pt", f"{os.path.getsize(pt)/1e6:.1f} MB")
+# best.pt Y last.pt. En una tirada LOFO el `val` de ultralytics es la finca ciega entera,
+# asi que `best.pt` es "la epoca que mejor puntuo en el holdout": vale como cota optimista,
+# pero el numero que se compara con v10 tiene que salir de `last.pt`, que no eligio nadie.
+for cual in ("best", "last"):
+    for pt in glob.glob(f"{WORK}/runs/**/weights/{cual}.pt", recursive=True):
+        etiqueta = pt.split("/runs/")[1].split("/weights")[0].replace("/", "_")
+        shutil.copy2(pt, f"{SALIDA}/{etiqueta}_{cual}.pt")
+        print("pesos ->", f"{etiqueta}_{cual}.pt", f"{os.path.getsize(pt)/1e6:.1f} MB")
 
 for j in ("cloud_runs.json", "scale_sweep.json"):
     if os.path.exists(f"{WORK}/{j}"):
