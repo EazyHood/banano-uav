@@ -775,11 +775,12 @@ def test_la_cuota_se_gasta_mas_rapido_que_el_reloj():
     sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
     from cuota import CUOTA_POR_HORA_DE_RELOJ, caben_horas
 
-    # Y el 3-sep, con una corrida en pleno entrenamiento, salio 2,01x: 0,67 h de reloj por
-    # 1,35 h de cuota. Ese es el ritmo que hay que presupuestar —dos GPU cobradas todo el
-    # rato— y los tramos mas bajos eran arranque y descarga, con la GPU aun sin asignar del
-    # todo. Bajar esta constante sin medir de nuevo es volver a lanzar tiradas que no caben.
-    assert CUOTA_POR_HORA_DE_RELOJ >= 2.0, "medido 2,01x en entrenamiento: no bajarlo sin medir"
+    # El 3-sep se midio 2,02x en los primeros 40 min de una corrida y se subio la constante a
+    # 2,0 dandolo por medido. La hora siguiente dio 1,38x y el acumulado de 97 min, 1,66x: la
+    # cuota que devuelve Kaggle avanza a saltos y una ventana corta no mide el ritmo, mide el
+    # salto. La constante se queda en 2,0 como MARGEN deliberado (el techo que la maquina
+    # puede cobrar: dos T4 todo el rato), no como medicion.
+    assert CUOTA_POR_HORA_DE_RELOJ >= 1.7, "por debajo de lo acumulado en corridas reales"
 
     # las 30 h semanales NO son 30 h de reloj: son menos de 15
     assert caben_horas(30.0) < 15.0

@@ -11,13 +11,21 @@ una sola desde que se arregló lo del DDP. Medido con lecturas de `kaggle quota`
 
     24-ago 15:28 -> 21:33 :  6,08 h de reloj, 9,88 h de cuota = 1,62x
     24-ago 21:33 -> 25-ago 10:17 : 12,73 h de reloj, 15,02 h de cuota = 1,18x
-    3-sep, corrida en marcha: 0,67 h de reloj, 1,35 h de cuota = **2,01x**
+    3-sep, una sola corrida seguida por tramos:
+        primeros 40 min .... 2,02x
+        siguientes 7 min ... 1,63x
+        siguientes 50 min .. 1,38x
+        ACUMULADO 97 min ... 1,66x   (1,75x si el kernel tardó 5 min en arrancar)
 
-Se toma **2,0x**, que además es el techo que tiene sentido: dos GPU cobradas todo el rato.
-Los tramos que salieron más bajos incluían el arranque y la descarga de datos, cuando la
-GPU aún no lleva rato asignada; en pleno entrenamiento el ritmo es 2x y ése es el que hay
-que usar para presupuestar. Traducido: **las 30 h de cuota semanal son unas 14,7 h de
-reloj**, no 30 ni 17. Una sesión de 9,5 h se come dos tercios de la semana.
+**Los tramos cortos no valen para esto**: la cuota que devuelve Kaggle avanza a saltos, así
+que una ventana de 40 min puede dar 2,02x y la hora siguiente 1,38x sin que cambie nada.
+Sólo el acumulado dice algo, y dice ~1,7x, que es lo que ya se usaba.
+
+Se toma **2,0x igualmente**, y conviene saber por qué: no es lo medido, es el techo que la
+máquina puede cobrar —dos T4 asignadas todo el rato— usado como MARGEN a propósito. Quedarse
+corto cuesta la corrida entera (pasó el 24-ago y otra vez el 3-sep); sobrar cuesta unas horas
+sin usar de una cuota que caduca el sábado igualmente. Traducido: se planifica como si las
+30 h semanales fueran 14,7 h de reloj, sabiendo que lo normal es que rindan ~17.
 
     python kaggle/cuota.py            # cuánto queda y qué cabe
     python kaggle/cuota.py --horas 6  # ¿cabe una tirada de 6 h?
