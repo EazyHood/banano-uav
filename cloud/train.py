@@ -41,6 +41,7 @@ import os
 import platform
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -165,6 +166,38 @@ def paciencia_efectiva(patience: int | None, horas: float | None) -> int:
     return 0 if horas else 20
 
 
+def crea_freno_por_reloj(limite_s: float, t0: float,
+                         reloj: Callable[[], float] = time.time) -> Callable[[Any], None]:
+    """Callback de fin de época que para el entrenamiento si no cabe otra época entera.
+
+    Por qué hace falta, además de `time=` de ultralytics: `time` reparte el presupuesto con
+    la MEDIA por época y redondea hacia arriba (`epochs = ceil(time*3600 / media)`), así que
+    se puede pasar hasta una época lenta completa. El 2026-09-03 una corrida presupuestada a
+    10,58 h de entrenamiento consumió ~11,9 h de reloj, chocó con el límite duro de 12 h de
+    Kaggle y la salida llegó **sin los pesos**: 20,27 h de cuota tiradas.
+
+    El criterio es el máximo, no la media, porque el desbordamiento lo causa justo la época
+    lenta: la pregunta es «¿cabe otra como la peor que he visto?».
+    """
+    peor_epoca = 0.0
+    fin_anterior = reloj()
+
+    def freno(trainer: Any) -> None:
+        nonlocal peor_epoca, fin_anterior
+        ahora = reloj()
+        peor_epoca = max(peor_epoca, ahora - fin_anterior)
+        fin_anterior = ahora
+        gastado = ahora - t0
+        if gastado + peor_epoca > limite_s:
+            trainer.epochs = trainer.epoch + 1  # el bucle de ultralytics mira esto
+            trainer.stop = True
+            print(f"  freno por reloj: {gastado/3600:.2f} h gastadas de "
+                  f"{limite_s/3600:.2f} y la peor epoca fue {peor_epoca/60:.1f} min. "
+                  "No cabe otra: se para aqui con los pesos escritos.", flush=True)
+
+    return freno
+
+
 def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: dict[str, Any]) -> dict[str, Any]:
     # multi_scale es una FRACCION de imgsz, no un interruptor. Poner True lo convierte en 1.0
     # y los lotes se sortean entre 32 px y 2*imgsz: a imgsz 1024 eso son lotes de 2048 px con
@@ -213,6 +246,19 @@ def entrena(args: argparse.Namespace, data: Path, receta: dict[str, Any], info: 
         hiper["time"] = args.horas
     t0 = time.time()
     modelo = YOLO(punto)
+
+    if args.horas:
+        # Pero `time` solo no basta, y esto costo una sesion entera. Ultralytics reparte el
+        # presupuesto con la MEDIA por epoca y redondea hacia arriba
+        # (`epochs = ceil(time*3600 / media)`), asi que se pasa hasta una epoca larga
+        # completa. El 2026-09-03 una corrida presupuestada a 10,58 h de entreno consumio
+        # ~11,9 h de reloj, choco con el limite duro de 12 h de Kaggle y la salida llego
+        # SIN los pesos: 20,27 h de cuota tiradas. El freno propio pregunta lo unico que
+        # importa antes de seguir: ¿cabe otra epoca COMO LA PEOR que he visto? Si no, para
+        # y deja los pesos escritos. Se queda con el maximo, no con la media, porque el
+        # desbordamiento lo causa justo la epoca lenta.
+        modelo.add_callback("on_fit_epoch_end",
+                            crea_freno_por_reloj(args.horas * 3600, t0))
     modelo.train(
         data=str(data),
         epochs=args.epochs,

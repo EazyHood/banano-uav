@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -369,8 +370,11 @@ def test_el_notebook_de_kaggle_es_python_valido_y_lleva_sus_guardas():
     assert "/kaggle/input/*/roboflow.json" in todo
     assert "UserSecretsClient" in todo
 
-    # y el limite de tiempo se presupuesta por debajo de las 12 h de Kaggle
-    assert "LIMITE_H = 11.0" in todo
+    # 7. El limite de tiempo se presupuesta por debajo de las 12 h de Kaggle, y con margen
+    #    para el desbordamiento de la ultima epoca: con 11 h la corrida del 2026-09-03 llego
+    #    a ~11,9 h de reloj y la salida vino sin los pesos.
+    presupuesto = float(re.search(r"^LIMITE_H = ([\d.]+)", todo, re.M).group(1))
+    assert presupuesto <= 10.0, f"LIMITE_H = {presupuesto}: no deja margen para el corte"
 
 
 def test_el_notebook_no_deja_los_datos_en_la_salida_autoguardada():
@@ -999,3 +1003,137 @@ def test_el_log_no_muere_al_imprimir_lo_que_trae_kaggle(monkeypatch):
 
     assert "46.0/46.0 kB" in escrito, "se comio el texto util al sanear"
     assert "café" in escrito, "cp1252 SI tiene acentos: no hay que perderlos"
+
+
+# ------------------------------------------- lo que costo la corrida del 2026-09-03
+
+
+def test_el_freno_para_antes_de_una_epoca_que_no_cabe():
+    # `time=` de ultralytics reparte con la MEDIA por epoca y redondea hacia arriba, asi que
+    # se pasa hasta una epoca lenta entera. Presupuesto 10,58 h -> 11,9 h de reloj -> choque
+    # con el limite duro de 12 h de Kaggle y salida SIN pesos: 20,27 h de cuota tiradas.
+    #
+    # Caso: presupuesto de 10 h; epocas de 1 h y luego una de 3 h. Tras la lenta van 5 h
+    # gastadas y otra como ella (3 h) se saldria de las 10 -> hay que parar YA, no despues.
+    sys.path.insert(0, RAIZ)
+    from cloud.train import crea_freno_por_reloj
+
+    H = 3600.0
+
+    class Trainer:
+        def __init__(self):
+            self.epoch = 0
+            self.epochs = 300
+            self.stop = False
+
+    def corre(instantes_h, limite_h=10.0):
+        """Devuelve el trainer tras terminar una epoca en cada instante dado (en horas).
+
+        La primera marca la consume la construccion del freno: es el arranque.
+        """
+        marcas = iter([h * H for h in instantes_h])
+        freno = crea_freno_por_reloj(limite_s=limite_h * H, t0=0.0, reloj=lambda: next(marcas))
+        t = Trainer()
+        for i in range(len(instantes_h) - 1):
+            t.epoch = i
+            freno(t)
+        return t
+
+    # epocas de 1 h, 1 h, 3 h (lenta) y 1 h: al final van 6 h gastadas y otra como la peor
+    # (3 h) suma 9, que cabe en 10. No debe frenar.
+    assert not corre([0, 1, 2, 5, 6]).stop, "freno demasiado pronto: aun cabia otra epoca"
+
+    # El caso que separa el MAXIMO de "lo que duro la ultima": epocas de 1 h, 4 h y 1 h con
+    # 9 h de presupuesto. Van 6 h gastadas; si la siguiente sale como la peor vista (4 h) se
+    # va a 10 y no cabe -> hay que parar. Mirando solo la ultima (1 h) parecerian caber 3 h
+    # mas, y ese es justo el error que costo la sesion del 2026-09-03.
+    t = corre([0, 1, 5, 6], limite_h=9.0)
+    assert t.stop, "dejo empezar una epoca que no cabia: mira la ultima y no la peor"
+    assert t.epochs == t.epoch + 1, "no le dice al bucle que esta es la ultima"
+
+
+def test_el_notebook_registra_la_salida_del_entrenamiento():
+    # El log del kernel de la corrida del 2026-09-03 se cortaba en seco a los 87 s, en
+    # "se entrena un maximo de 10.58 h", sin UNA linea del entrenamiento: se lanzaba con
+    # subprocess.run heredando el descriptor, y en Jupyter eso no se captura (lo que el
+    # kernel guarda son los print de Python, no el fd del sistema). 11,9 h de GPU sin una
+    # linea que diga que paso.
+    # Se ejecuta el fragmento REAL del notebook contra un proceso de pega que escribe por las
+    # dos salidas. Comprobar que el fuente dice "Popen" no vale: con stdout heredado la
+    # palabra sigue ahi y no se registra nada (lo enseño una mutacion).
+    celdas = _notebook()
+    entreno = next(c for c in celdas if "cloud/train.py" in c)
+    fragmento = entreno[entreno.index("with open(LOG_ENTRENO"):]
+    fragmento = fragmento[:fragmento.index("codigo = proceso.wait()") + len("codigo = proceso.wait()")]
+
+    registro = pathlib.Path(os.environ.get("TEMP", "/tmp")) / "entrenamiento_prueba.log"
+    consola = []
+    espacio = {
+        "open": open,
+        "subprocess": subprocess,
+        "LOG_ENTRENO": str(registro),
+        "SRC": RAIZ,
+        "print": lambda *a, **k: consola.append("".join(str(x) for x in a)),
+        "orden": [sys.executable, "-c",
+                  "import sys; print('linea de entrenamiento'); "
+                  "print('CUDA out of memory', file=sys.stderr)"],
+    }
+    exec(fragmento, espacio)  # noqa: S102 - es el codigo del notebook, ese es el objetivo
+
+    escrito = registro.read_text(encoding="utf-8")
+    assert "linea de entrenamiento" in escrito, "la salida del entrenamiento no se registra"
+    assert "CUDA out of memory" in escrito, "el error del entrenamiento se pierde por stderr"
+    assert any("linea de entrenamiento" in c for c in consola), "no llega al log del kernel"
+    assert espacio["codigo"] == 0
+    registro.unlink(missing_ok=True)
+
+
+def test_los_pesos_no_dependen_de_que_la_ultima_celda_llegue_a_correr():
+    # La corrida del 2026-09-03 subio 11 ficheros (splits, args.yaml, log) y NINGUN peso: la
+    # celda que los copia a resultados/ nunca se ejecuto. Si hay pesos a medio camino, tienen
+    # que estar ya en la salida.
+    celdas = _notebook()
+    entreno = next(c for c in celdas if "cloud/train.py" in c)
+    assert "threading.Thread" in entreno and "daemon=True" in entreno
+    assert "last.pt" in entreno, "la salvaguarda no copia el last.pt"
+    # y arranca ANTES de esperar al entrenamiento: puesta despues no copiaria nada mientras
+    # la corrida esta viva, que es justo cuando hace falta
+    assert entreno.index("threading.Thread") < entreno.index("proceso.wait()")
+
+
+def test_el_presupuesto_de_horas_se_fija_al_lanzar_y_no_deja_marcadores():
+    # Con 11 h no cabia el desbordamiento de la ultima epoca. El valor tiene que poder
+    # bajarse sin editar el notebook a mano, y un marcador que sobreviva seria un NameError
+    # en la primera celda con la sesion ya reservada.
+    sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
+    import build_notebook
+    import pytest
+
+    assert build_notebook.LIMITE_H_DEFECTO <= 10.0, "el defecto vuelve a no dejar margen"
+    assert "LIMITE_H = 5.0" in build_notebook.rellena("LIMITE_H = __LIMITE_H__", 5.0)
+
+    # un marcador nuevo que alguien añada a la lista y olvide sustituir tiene que reventar
+    # AQUI, no en la primera celda del notebook con la sesion de nube ya reservada
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(build_notebook, "MARCADORES", ("__LIMITE_H__", "__NUEVO__"))
+        with pytest.raises(ValueError, match="marcador sin resolver"):
+            build_notebook.rellena("algo = __NUEVO__", 5.0)
+
+    # y el notebook que se sube no lleva ninguno
+    celdas = _notebook()
+    assert not any("__LIMITE_H__" in c for c in celdas)
+
+
+def test_el_cli_de_kaggle_necesita_modo_utf8_no_solo_prints_saneados():
+    # El 2026-09-03 `--recoger` murio con UnicodeEncodeError DENTRO de la libreria
+    # (kaggle_api_extended.py:6739, `out.write(log)` sobre un open() sin encoding), no en
+    # nuestros print: sanear la salida no bastaba, hacia falta cambiar lo que open() usa por
+    # defecto. El re-exec en modo UTF-8 arregla libreria, subprocesos y consola de una vez.
+    sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
+    import lanzar
+
+    assert lanzar.orden_utf8(True, "py.exe", "lanzar.py", ["--recoger"]) is None, (
+        "se relanzaria en bucle estando ya en modo UTF-8"
+    )
+    orden = lanzar.orden_utf8(False, "py.exe", "lanzar.py", ["--recoger", "--destino", "d"])
+    assert orden == ["py.exe", "-X", "utf8", "lanzar.py", "--recoger", "--destino", "d"], orden

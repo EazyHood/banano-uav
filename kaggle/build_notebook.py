@@ -10,6 +10,7 @@ Escribe kaggle/entrenar/banano-entrenar.ipynb
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 from typing import Any
@@ -44,7 +45,12 @@ el ordenador; la sesión sigue en el servidor. Límite duro: **12 horas**.""",
         """# --- 1. Qué máquina nos ha tocado -----------------------------------------------
 import subprocess, sys, time, os, json
 T0 = time.time()
-LIMITE_H = 11.0   # Kaggle corta a las 12 h y al pasarse el guardado de ficheros es "best effort"
+# Presupuesto de RELOJ para toda la sesion, entrenamiento incluido. Kaggle corta a las 12 h y
+# al pasarse el guardado de ficheros es "best effort": el 2026-09-03 una corrida presupuestada
+# a 11 h consumio 20,27 h de cuota (~11,9 h de reloj), choco con el limite y la salida llego
+# SIN los pesos. 11 h no dejaba sitio para el desbordamiento de la ultima epoca, que en esta
+# configuracion dura entre una y dos horas. Se fija al lanzar: `lanzar.py --horas N`.
+LIMITE_H = __LIMITE_H__
 
 import torch
 print("torch", torch.__version__, "| cuda", torch.cuda.is_available())
@@ -313,22 +319,61 @@ restante_h = LIMITE_H - (time.time() - T0) / 3600
 horas_entreno = max(0.5, restante_h - 0.4)   # margen para guardar y recoger
 print(f"llevamos {(time.time()-T0)/3600:.2f} h; se entrena un maximo de {horas_entreno:.2f} h")
 
-r = subprocess.run([sys.executable, f"{SRC}/cloud/train.py",
-                    "--data", DATA,
-                    "--receta", RECETA,
-                    "--modelo", MODELO,
-                    "--imgsz", str(IMGSZ),
-                    "--horas", f"{horas_entreno:.2f}",
-                    "--epochs", "300",
-                    "--proyecto", f"{WORK}/runs",
-                    "--salida", f"{WORK}/cloud_runs.json"], cwd=SRC)
+# La salida del entrenamiento SE REGISTRA, linea a linea. Antes se lanzaba con
+# subprocess.run heredando el descriptor, y en Jupyter eso NO se captura: lo que el kernel
+# guarda como log son los print de Python, no el fd del sistema. Medido el 2026-09-03 con la
+# corrida que se comio 11,9 h y 20,27 h de cuota: el log del kernel se cortaba en seco a los
+# 87 segundos, justo en "se entrena un maximo de 10.58 h", y no habia una sola linea del
+# entrenamiento. Sin log no hay diagnostico, y sin diagnostico se repite el gasto. Va a un
+# fichero DENTRO de la salida ademas de a la consola, porque el log del kernel tambien se
+# pierde si Kaggle corta la sesion.
+SALIDA = f"{WORK}/resultados"
+os.makedirs(SALIDA, exist_ok=True)
+LOG_ENTRENO = f"{SALIDA}/entrenamiento.log"
+
+# Y una salvaguarda de pesos cada 10 min: si la sesion muere antes de la celda 9, el last.pt
+# de ultralytics ya esta copiado en resultados/ y viaja en la salida de la version.
+import glob, shutil, threading
+
+def _salvaguarda_pesos():
+    while True:
+        time.sleep(600)
+        for pt in glob.glob(f"{WORK}/runs/**/weights/last.pt", recursive=True):
+            etiqueta = pt.split("/runs/")[1].split("/weights")[0].replace("/", "_")
+            try:
+                shutil.copy2(pt, f"{SALIDA}/{etiqueta}_last.pt")
+            except OSError:
+                pass
+
+threading.Thread(target=_salvaguarda_pesos, daemon=True).start()
+
+orden = [sys.executable, "-u", f"{SRC}/cloud/train.py",
+         "--data", DATA,
+         "--receta", RECETA,
+         "--modelo", MODELO,
+         "--imgsz", str(IMGSZ),
+         "--horas", f"{horas_entreno:.2f}",
+         "--epochs", "300",
+         "--proyecto", f"{WORK}/runs",
+         "--salida", f"{WORK}/cloud_runs.json"]
+print(" ".join(orden), flush=True)
+with open(LOG_ENTRENO, "w", encoding="utf-8", buffering=1) as fh:
+    proceso = subprocess.Popen(orden, cwd=SRC, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, text=True,
+                               encoding="utf-8", errors="replace", bufsize=1)
+    for linea in proceso.stdout:
+        fh.write(linea)
+        # las barras de tqdm son un solo "renglon" con muchos retornos de carro dentro: al
+        # fichero entero, a la consola solo el ultimo estado, o el log se vuelve ilegible
+        print(linea.rsplit("\\r", 1)[-1], end="", flush=True)
+    codigo = proceso.wait()
 
 # La primera vez esto era check=False y no se miraba: el entrenamiento murio en la primera
 # iteracion, el notebook siguio hasta el final y la sesion se dio por buena. Un fallo aqui
 # tiene que verse.
-if r.returncode != 0:
-    print(f"AVISO: el entrenamiento termino con codigo {r.returncode}. "
-          f"Mira {WORK}/cloud_runs.json para el motivo.")
+if codigo != 0:
+    print(f"AVISO: el entrenamiento termino con codigo {codigo}. "
+          f"Mira {WORK}/cloud_runs.json y {LOG_ENTRENO} para el motivo.")
 
 """
     ),
@@ -379,13 +424,40 @@ print("\\n".join(sorted(os.listdir(SALIDA))))""",
 ]
 
 
-def main() -> int:
+LIMITE_H_DEFECTO = 9.5  # ver el comentario de LIMITE_H en la celda 1
+
+
+MARCADORES = ("__LIMITE_H__",)
+
+
+def rellena(fuente: str, limite_h: float) -> str:
+    """Sustituye los marcadores de la plantilla y comprueba que no queda ninguno.
+
+    La comprobación no es paranoia: un marcador que sobreviva llega al notebook como un
+    NameError en la primera celda, ya con la sesión de nube reservada.
+    """
+    fuente = fuente.replace("__LIMITE_H__", f"{limite_h}")
+    sobran = [m for m in MARCADORES if m in fuente]
+    if sobran:
+        raise ValueError(f"marcador sin resolver en el notebook: {sobran}")
+    return fuente
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--limite-h", type=float, default=LIMITE_H_DEFECTO,
+                    help="presupuesto de reloj de la sesion, en horas (Kaggle corta a las 12)")
+    args = ap.parse_args(argv)
+    if not 0.5 <= args.limite_h <= 11.0:
+        ap.error("--limite-h fuera de rango: entre 0.5 y 11.0 (Kaggle corta a las 12 h)")
+
     celdas: list[dict[str, Any]] = []
     for tipo, fuente in CELDAS:
         base: dict[str, Any] = {
             "cell_type": tipo,
             "metadata": {},
-            "source": fuente.splitlines(keepends=True),
+            "source": rellena(fuente, args.limite_h).splitlines(keepends=True),
         }
         if tipo == "code":
             base["execution_count"] = None

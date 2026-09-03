@@ -48,6 +48,37 @@ ACELERADOR = "NvidiaTeslaT4"  # NUNCA P100: la imagen de Kaggle no trae kernels 
 DATASET_PESOS = "banano-uav-pesos"  # dataset privado que encadena una sesión con la siguiente
 
 
+def orden_utf8(utf8_activo: bool, ejecutable: str, script: str, argumentos: list[str]) -> list[str] | None:
+    """La orden con la que relanzarse en modo UTF-8, o None si ya no hace falta.
+
+    No es cosmético y no basta con arreglar los `print` de aquí: **el CLI de Kaggle escribe
+    el log del kernel a un fichero con `open()` sin `encoding`**
+    (`kaggle_api_extended.py:6739`), así que usa la codificación del sistema. En Windows eso
+    es cp1252, el log trae las barras de progreso de pip (━) y los ✅ de ultralytics, y la
+    llamada muere con `UnicodeEncodeError` **dentro de la librería**. Medido el 2026-09-03:
+    `--recoger` reventó así con la salida de una corrida ya terminada, y el mismo fallo se
+    llevaba `--log` por delante. El modo UTF-8 del intérprete (`-X utf8`) cambia lo que
+    `open()` usa por defecto, y arregla de una vez la librería, los subprocesos y la consola.
+    """
+    if utf8_activo:
+        return None
+    return [ejecutable, "-X", "utf8", script, *argumentos]
+
+
+def asegura_utf8() -> None:
+    """Se relanza en modo UTF-8 si no lo está ya. Ver `orden_utf8` para el porqué."""
+    if os.name != "nt" or os.environ.get("BANANO_UTF8"):
+        return
+    orden = orden_utf8(bool(sys.flags.utf8_mode), sys.executable,
+                       str(Path(__file__).resolve()), sys.argv[1:])
+    if orden is None:
+        return
+    os.environ["BANANO_UTF8"] = "1"      # cinturón: nunca dos veces
+    os.environ["PYTHONUTF8"] = "1"       # y los subprocesos heredan el modo
+    os.environ["PYTHONIOENCODING"] = "utf-8"
+    os.execv(orden[0], orden)
+
+
 def imprimible(texto: str) -> str:
     """El mismo texto, pero que la consola de destino pueda escribir sin morirse.
 
@@ -264,6 +295,7 @@ def recoger(kid: str, destino: Path) -> int:
 
 
 def main() -> int:
+    asegura_utf8()
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--usuario", help="tu usuario de Kaggle, si no se detecta solo")
     ap.add_argument("--estado", action="store_true", help="consulta cómo va la corrida")
@@ -273,6 +305,10 @@ def main() -> int:
                          "sesión continúe en vez de empezar de cero")
     ap.add_argument("--forzar", action="store_true",
                     help="lanza aunque la cuota no alcance")
+    ap.add_argument("--horas", type=float, default=None,
+                    help="presupuesto de reloj de la sesión, en horas (por defecto, el del "
+                         "notebook). Kaggle corta a las 12 y al pasarse se pueden perder "
+                         "los pesos: con 11 pasó el 2026-09-03")
     ap.add_argument("--log", action="store_true", help="enseña el log de la corrida (sin descargar la salida)")
     ap.add_argument("--destino", type=Path, default=AQUI.parent / "runs_cloud" / "kaggle")
     args = ap.parse_args()
@@ -330,8 +366,12 @@ def main() -> int:
                 print(_linea, file=sys.stderr)
             return 2
 
-    # Regenerar el notebook para que lo que se sube sea lo que está en el repo
-    subprocess.run([sys.executable, str(AQUI / "build_notebook.py")], check=True)
+    # Regenerar el notebook para que lo que se sube sea lo que está en el repo, con el
+    # presupuesto de reloj de ESTA tirada dentro.
+    orden_build = [sys.executable, str(AQUI / "build_notebook.py")]
+    if args.horas is not None:
+        orden_build += ["--limite-h", f"{args.horas}"]
+    subprocess.run(orden_build, check=True)
 
     print(f"Subiendo {kid} con acelerador {ACELERADOR}...")
     r = subprocess.run([k, "kernels", "push", "-p", str(CARPETA), "--accelerator", ACELERADOR],
