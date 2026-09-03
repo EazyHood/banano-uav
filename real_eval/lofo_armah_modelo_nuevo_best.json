@@ -1,0 +1,54 @@
+{
+  "pesos": "lofo_armah_escala_yolo11m_1024_best.pt",
+  "device": "0",
+  "conf": 0.001,
+  "max_det": 1000,
+  "nota_metodo": "El imgsz que se publique debe salir del promedio LOFO, no de una sola finca: elegirlo mirando armah es afinar sobre el holdout.",
+  "fincas": {
+    "lofo_armah": {
+      "barrido": [
+        {
+          "imgsz": 768,
+          "mAP50": 0.3582,
+          "mAP50_95": 0.1461,
+          "precision": 0.7544,
+          "recall": 0.3098,
+          "segundos": 5.3
+        },
+        {
+          "imgsz": 1024,
+          "mAP50": 0.366,
+          "mAP50_95": 0.154,
+          "precision": 0.7786,
+          "recall": 0.3191,
+          "segundos": 4.0
+        },
+        {
+          "imgsz": 1280,
+          "mAP50": 0.3505,
+          "mAP50_95": 0.1562,
+          "precision": 0.7666,
+          "recall": 0.3048,
+          "segundos": 7.6
+        }
+      ],
+      "mejor": {
+        "imgsz": 1024,
+        "mAP50": 0.366,
+        "mAP50_95": 0.154,
+        "precision": 0.7786,
+        "recall": 0.3191,
+        "segundos": 4.0
+      },
+      "base_768": {
+        "imgsz": 768,
+        "mAP50": 0.3582,
+        "mAP50_95": 0.1461,
+        "precision": 0.7544,
+        "recall": 0.3098,
+        "segundos": 5.3
+      },
+      "veredicto": "ESCALA REFUTADA (mejor 1024, +2% sobre 768)"
+    }
+  }
+}

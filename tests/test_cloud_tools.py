@@ -913,6 +913,12 @@ def test_el_veredicto_sale_de_last_y_no_de_best(tmp_path, monkeypatch):
     pesos.mkdir(parents=True)
     (pesos / "best.pt").write_bytes(b"x" * 100)
     (pesos / "last.pt").write_bytes(b"x" * 100)
+    # y la curva por epoca, con un pico aislado (0.40) entre vecinas de 0.20-0.22: la
+    # mediana de la cola tiene que salir en el veredicto para que el pico no engane
+    curva = ["epoch,metrics/mAP50(B),metrics/recall(B)"] + [
+        f"{i},{m},{m*0.9:.3f}" for i, m in enumerate([0.20, 0.21, 0.40, 0.22, 0.20], 1)
+    ]
+    (pesos.parent / "results.csv").write_text("\n".join(curva) + "\n", encoding="utf-8")
 
     barridos = {
         "best": [{"imgsz": 1024, "mAP50": 0.4000, "recall": 0.3500, "precision": 0.80}],
@@ -946,6 +952,7 @@ def test_el_veredicto_sale_de_last_y_no_de_best(tmp_path, monkeypatch):
     assert "0.2000" in texto, "no ensena la cifra de last.pt, que es la que decide"
     assert "0.4000" in texto, "esconde la de best.pt, que hay que poder auditar"
     assert "cota superior" in texto, "no avisa de que el best se eligio mirando armah"
+    assert "mediana 0.210" in texto, "no ensena la mediana de la cola: el pico de 0.40 engana solo"
 
 
 def test_apagar_la_telemetria_no_puede_tumbar_la_corrida(tmp_path):
@@ -1142,3 +1149,73 @@ def test_el_cli_de_kaggle_necesita_modo_utf8_no_solo_prints_saneados():
     )
     orden = lanzar.orden_utf8(False, "py.exe", "lanzar.py", ["--recoger", "--destino", "d"])
     assert orden == ["py.exe", "-X", "utf8", "lanzar.py", "--recoger", "--destino", "d"], orden
+
+
+def test_relanzarse_en_utf8_espera_al_hijo_y_devuelve_su_codigo(monkeypatch):
+    # En Windows os.execv NO reemplaza el proceso: arranca un hijo y el padre termina en el
+    # acto con codigo 0. Asi, `al_terminar.py` llamo a `lanzar.py --recoger`, el padre volvio
+    # al instante y el vigia siguio adelante mientras la descarga aun corria: encontro best.pt
+    # (13:36:12) pero no last.pt (13:36:16) y dicto el veredicto con el peso equivocado.
+    # Medido el 2026-09-03. El relanzamiento tiene que ESPERAR y devolver el codigo del hijo.
+    import pytest
+
+    if os.name != "nt":
+        pytest.skip("el relanzamiento solo existe en Windows")
+    sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
+    import lanzar
+
+    llamadas = []
+
+    def falso_run(orden, **kw):
+        llamadas.append(orden)
+        return subprocess.CompletedProcess(orden, 7, "", "")
+
+    monkeypatch.delenv("BANANO_UTF8", raising=False)
+    monkeypatch.setattr(lanzar.subprocess, "run", falso_run)
+    monkeypatch.setattr(lanzar.os, "execv", lambda *a: (_ for _ in ()).throw(
+        AssertionError("os.execv en Windows no espera al hijo: usar subprocess + exit")))
+    monkeypatch.setattr(lanzar.sys, "argv", ["lanzar.py", "--recoger"])
+
+    if sys.flags.utf8_mode:
+        pytest.skip("pytest ya corre en modo UTF-8: el relanzamiento no se dispara")
+    with pytest.raises(SystemExit) as fin:
+        lanzar.asegura_utf8()
+
+    assert fin.value.code == 7, "no devuelve el codigo del hijo"
+    assert llamadas and "-X" in llamadas[0] and "utf8" in llamadas[0]
+    assert llamadas[0][-1] == "--recoger", "no le pasa los argumentos al hijo"
+
+
+def test_el_vigia_mide_una_sola_vez_por_lanzamiento(tmp_path, monkeypatch):
+    # Con el kernel en COMPLETE, cada pasada de 30 min volvia a bajar 80 MB y a gastar la GPU
+    # de casa en dos barridos, indefinidamente (medido el 2026-09-03: dos mediciones en 30
+    # min de la misma corrida). La regla: se mide una vez por lanzamiento; un lanzamiento
+    # NUEVO (marca mas reciente que la ultima medicion) vuelve a habilitar la medicion.
+    import time as _time
+
+    sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
+    import al_terminar
+
+    raiz = tmp_path / "repo"
+    (raiz / "runs_cloud").mkdir(parents=True)
+    recogidas = []
+    monkeypatch.setattr(al_terminar, "ROOT", raiz)
+    monkeypatch.setattr(al_terminar, "VEREDICTO", tmp_path / "VEREDICTO.md")
+    monkeypatch.setattr(al_terminar, "estado", lambda kid: "COMPLETE")
+    monkeypatch.setattr(al_terminar, "avisa", lambda *a, **k: None)
+    monkeypatch.setattr(al_terminar.subprocess, "run",
+                        lambda cmd, **kw: (recogidas.append(cmd), subprocess.CompletedProcess(cmd, 0, "", ""))[1])
+    monkeypatch.setattr(sys, "argv", ["al_terminar.py", "--kernel", "u/k"])
+
+    # (a) ya medido y sin lanzamiento posterior -> no recoge nada
+    (raiz / "runs_cloud" / ".ultima_medicion").write_text("last 0.2440 0.2257\n")
+    assert al_terminar.main() == 0
+    assert recogidas == [], "volvio a recoger una corrida ya medida"
+
+    # (b) un lanzamiento NUEVO, posterior a la medicion -> vuelve a recoger
+    _time.sleep(0.05)
+    (raiz / "runs_cloud" / ".ultimo_lanzamiento").write_text("u/k\n")
+    marca_nueva = _time.time() + 5
+    os.utime(raiz / "runs_cloud" / ".ultimo_lanzamiento", (marca_nueva, marca_nueva))
+    al_terminar.main()
+    assert recogidas and "--recoger" in [str(c) for c in recogidas[0]], "no recoge tras un lanzamiento nuevo"

@@ -76,7 +76,12 @@ def asegura_utf8() -> None:
     os.environ["BANANO_UTF8"] = "1"      # cinturón: nunca dos veces
     os.environ["PYTHONUTF8"] = "1"       # y los subprocesos heredan el modo
     os.environ["PYTHONIOENCODING"] = "utf-8"
-    os.execv(orden[0], orden)
+    # subprocess + exit, y NO os.execv. En Windows execv no reemplaza el proceso: arranca
+    # un hijo y el padre termina en el acto con codigo 0, asi que quien nos haya llamado
+    # (al_terminar.py, con `--recoger`) sigue adelante mientras la descarga aun corre.
+    # Medido el 2026-09-03: el vigia encontro best.pt (bajado a las 13:36:12) pero no
+    # last.pt (13:36:16), midio solo el best y dicto "GANA" con el peso equivocado.
+    raise SystemExit(subprocess.run(orden).returncode)
 
 
 def imprimible(texto: str) -> str:
@@ -383,6 +388,12 @@ def main() -> int:
             print("\nSi tu CLI no acepta --accelerator, elige 'GPU T4 x2' en el editor web.",
                   file=sys.stderr)
         return r.returncode
+
+    # Marca de tiempo del lanzamiento: el vigía mide una sola vez por corrida comparándola
+    # con la de su última medición (sin esto repetía recogida y GPU cada 30 min).
+    marca_lanz = AQUI.parent / "runs_cloud" / ".ultimo_lanzamiento"
+    marca_lanz.parent.mkdir(parents=True, exist_ok=True)
+    marca.write_text(f"{kid}\n", encoding="utf-8")
 
     print(
         f"\nLanzado. Ya puedes apagar el PC.\n"

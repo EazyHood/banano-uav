@@ -170,7 +170,19 @@ def main() -> int:
         )
         return 0
 
-    # COMPLETE: recoger y medir
+    # COMPLETE: recoger y medir, pero UNA vez por corrida. Sin esta guarda, con el kernel en
+    # COMPLETE cada pasada de 30 min volvía a bajar 80 MB y a gastar la GPU de casa en dos
+    # barridos, indefinidamente, hasta que alguien lanzara otra corrida (medido el 3-sep).
+    # `lanzar.py` deja la hora de cada lanzamiento; aquí se deja la de cada medición.
+    ultimo_lanzamiento = ROOT / "runs_cloud" / ".ultimo_lanzamiento"
+    ultima_medicion = ROOT / "runs_cloud" / ".ultima_medicion"
+    if ultima_medicion.exists() and (
+        not ultimo_lanzamiento.exists()
+        or ultima_medicion.stat().st_mtime > ultimo_lanzamiento.stat().st_mtime
+    ):
+        print("esta corrida ya está medida; nada que hacer")
+        return 0
+
     destino = ROOT / "runs_cloud" / "kaggle_lofo"
     subprocess.run([sys.executable, str(AQUI / "lanzar.py"), "--recoger", "--destino", str(destino)],
                    cwd=str(ROOT))
@@ -246,6 +258,25 @@ def main() -> int:
             "Es cota superior, no resultado.\n"
         )
 
+    # La curva entera, para que ni el pico ni la última época engañen: con el tope de horas
+    # el lr apenas decae y el mAP50 por época oscila (el 3-sep, entre 0,23 y 0,37 en las
+    # últimas 16). La mediana de la cola es lo que da la receta sin elegir época.
+    cola = ""
+    csv_res = max(destino.rglob("*results.csv"), key=lambda p: p.stat().st_mtime, default=None)
+    if csv_res is not None:
+        import csv
+        filas_csv = list(csv.DictReader(csv_res.open(encoding="utf-8")))
+        ultimas = filas_csv[-10:]
+        if ultimas:
+            m50 = sorted(float(f["metrics/mAP50(B)"]) for f in ultimas)
+            rec = sorted(float(f["metrics/recall(B)"]) for f in ultimas)
+            cola = (
+                f"\nCurva de entrenamiento: {len(filas_csv)} épocas; en las últimas "
+                f"{len(ultimas)} el mAP50 en armah fue de {m50[0]:.3f} a {m50[-1]:.3f} "
+                f"(mediana {m50[len(m50)//2]:.3f}, recall mediana {rec[len(rec)//2]:.3f}). "
+                "Eso es lo que da la receta sin elegir época.\n"
+            )
+
     escribe(f"""# Banano: resultado de la corrida en la nube
 
 **{'✅ EL MODELO NUEVO GANA' if gana else '❌ NO SUPERA AL QUE YA TIENES'}**
@@ -257,7 +288,7 @@ entera fuera, y a la misma resolución con la que se midió la vara.
 |---|---:|---:|
 | v10 (el publicado, a 1024 px) | {VARA['mAP50']:.4f} | {VARA['recall']:.4f} |
 | **modelo nuevo** (`{cual}.pt`, a {fila['imgsz']} px) | **{fila['mAP50']:.4f}** | **{fila['recall']:.4f}** |
-{optimista}
+{optimista}{cola}
 Barridos completos:
 
 {tablas}
@@ -269,6 +300,7 @@ Medición: `real_eval/lofo_armah_modelo_nuevo_*.json`
 
 > Recuerda regenerar el token de Kaggle: https://www.kaggle.com/settings/api
 """)
+    ultima_medicion.write_text(f"{cual} {fila['mAP50']:.4f} {fila['recall']:.4f}\n", encoding="utf-8")
     return 0
 
 
