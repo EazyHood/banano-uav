@@ -1219,3 +1219,56 @@ def test_el_vigia_mide_una_sola_vez_por_lanzamiento(tmp_path, monkeypatch):
     os.utime(raiz / "runs_cloud" / ".ultimo_lanzamiento", (marca_nueva, marca_nueva))
     al_terminar.main()
     assert recogidas and "--recoger" in [str(c) for c in recogidas[0]], "no recoge tras un lanzamiento nuevo"
+
+
+def _lanzador_simulado(monkeypatch, cuota, estado_kernel):
+    """`lanzar.main()` sin red: cuota y estado del kernel simulados; el push se registra."""
+    sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
+    import cuota as mod_cuota
+    import lanzar
+
+    empujes = []
+
+    def falso_run(cmd, **kw):
+        cmd = [str(c) for c in cmd]
+        if "status" in cmd:
+            return subprocess.CompletedProcess(cmd, 0, f'u/k has status "{estado_kernel}"', "")
+        if "push" in cmd:
+            empujes.append(cmd)
+            return subprocess.CompletedProcess(cmd, 0, "Kernel version 99 successfully pushed.", "")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(lanzar, "asegura_utf8", lambda: None)
+    monkeypatch.setattr(lanzar, "cli", lambda: "kaggle")
+    monkeypatch.setattr(lanzar, "usuario", lambda: "u")
+    monkeypatch.setattr(lanzar, "fija_id", lambda user: "u/k")
+    monkeypatch.setattr(lanzar.subprocess, "run", falso_run)
+    monkeypatch.setattr(mod_cuota, "lee", lambda: cuota)
+    return lanzar, empujes
+
+
+def test_el_lanzador_exige_que_quepan_las_horas_pedidas(monkeypatch):
+    # Hasta el 3-sep solo miraba si cabia UNA hora. Con 4,59 h de cuota (2,0 h de reloj) y
+    # `--horas 9.5` habria empujado igual, Kaggle la habria cancelado a mitad y se habria
+    # repetido el 24-ago. Y la tarea programada del viernes se apoya en este aborto: si la
+    # cuota no se ha renovado a las 19:30, tiene que negarse y dejar el intento de las 22:30.
+    lanzar, empujes = _lanzador_simulado(monkeypatch, cuota=(25.41, 4.59), estado_kernel="KernelWorkerStatus.COMPLETE")
+    monkeypatch.setattr(sys, "argv", ["lanzar.py", "--horas", "9.5"])
+    assert lanzar.main() == 2
+    assert empujes == [], "empujo una tirada de 9,5 h con cuota para 2"
+
+    # con la cuota renovada, la misma orden SI lanza
+    lanzar, empujes = _lanzador_simulado(monkeypatch, cuota=(0.0, 30.0), estado_kernel="KernelWorkerStatus.COMPLETE")
+    monkeypatch.setattr(sys, "argv", ["lanzar.py", "--horas", "9.5"])
+    assert lanzar.main() == 0
+    assert len(empujes) == 1
+
+
+def test_el_lanzador_no_empuja_encima_de_una_corrida_en_marcha(monkeypatch):
+    # La tarea del viernes tiene dos intentos (19:30 y 22:30). Si el primero salio, a las
+    # 22:30 la cuota restante aun "cabe" y sin esta guarda se empujaria una segunda version:
+    # la primera queda huerfana con su cuota gastada.
+    lanzar, empujes = _lanzador_simulado(monkeypatch, cuota=(5.0, 25.0), estado_kernel="KernelWorkerStatus.RUNNING")
+    monkeypatch.setattr(sys, "argv", ["lanzar.py", "--horas", "9.5"])
+    assert lanzar.main() == 3
+    assert empujes == [], "empujo una corrida encima de otra en RUNNING"

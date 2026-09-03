@@ -370,6 +370,26 @@ def main() -> int:
             for _linea in ('NO HAY CUOTA para una tirada util: Kaggle la cancelaria a mitad.', 'Se renueva el sabado a medianoche UTC. Detalle: python kaggle/cuota.py', 'Si aun asi quieres lanzarla: --forzar'):
                 print(_linea, file=sys.stderr)
             return 2
+        # Y que quepan LAS HORAS PEDIDAS, no "alguna". Hasta el 3-sep esto solo miraba si
+        # cabia una hora: con 4,59 h de cuota y `--horas 9.5` habria empujado igual, y
+        # Kaggle la habria cancelado a mitad, que es exactamente lo que paso el 24-ago.
+        if args.horas is not None and caben < args.horas and not args.forzar:
+            print(f"NO CABE una tirada de {args.horas} h: caben ~{caben:.1f} h de reloj con "
+                  f"{libres:.2f} h de cuota. Kaggle la cancelaria a mitad.\n"
+                  "Se renueva el sabado a medianoche UTC (19:00 del viernes en Colombia). "
+                  "Si aun asi quieres lanzarla: --forzar", file=sys.stderr)
+            return 2
+
+    # Nunca dos corridas a la vez. Un `kernels push` con el kernel en RUNNING no se encola:
+    # crea una version nueva y la anterior queda huerfana, con su cuota gastada. Esto hace
+    # falta desde que el lanzamiento va en una tarea programada con dos intentos (19:30 y
+    # 22:30 del viernes): si el primero salio, el segundo tiene que negarse.
+    r_estado = subprocess.run([k, "kernels", "status", kid], capture_output=True, text=True)
+    texto_estado = (r_estado.stdout + r_estado.stderr).upper()
+    if any(m in texto_estado for m in ("RUNNING", "QUEUED")) and not args.forzar:
+        print(f"YA HAY UNA CORRIDA EN MARCHA ({kid}). No se lanza otra encima: "
+              "python kaggle/lanzar.py --estado", file=sys.stderr)
+        return 3
 
     # Regenerar el notebook para que lo que se sube sea lo que está en el repo, con el
     # presupuesto de reloj de ESTA tirada dentro.
