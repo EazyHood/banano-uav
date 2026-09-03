@@ -1221,12 +1221,18 @@ def test_el_vigia_mide_una_sola_vez_por_lanzamiento(tmp_path, monkeypatch):
     assert recogidas and "--recoger" in [str(c) for c in recogidas[0]], "no recoge tras un lanzamiento nuevo"
 
 
-def _lanzador_simulado(monkeypatch, cuota, estado_kernel):
-    """`lanzar.main()` sin red: cuota y estado del kernel simulados; el push se registra."""
+def _lanzador_simulado(monkeypatch, cuota, estado_kernel, tmp_path):
+    """`lanzar.main()` sin red: cuota y estado del kernel simulados; el push se registra.
+
+    AQUI se desvia a tmp_path: la primera version de esto dejo un `.ultimo_lanzamiento`
+    con "u/k" dentro en el runs_cloud REAL del repo, y durante veinte minutos parecio que
+    una tarea programada habia lanzado una corrida de 9,5 h con cuota para 2.
+    """
     sys.path.insert(0, os.path.join(RAIZ, "kaggle"))
     import cuota as mod_cuota
     import lanzar
 
+    monkeypatch.setattr(lanzar, "AQUI", tmp_path / "repo" / "kaggle")
     empujes = []
 
     def falso_run(cmd, **kw):
@@ -1247,28 +1253,38 @@ def _lanzador_simulado(monkeypatch, cuota, estado_kernel):
     return lanzar, empujes
 
 
-def test_el_lanzador_exige_que_quepan_las_horas_pedidas(monkeypatch):
+def test_el_lanzador_exige_que_quepan_las_horas_pedidas(monkeypatch, tmp_path):
     # Hasta el 3-sep solo miraba si cabia UNA hora. Con 4,59 h de cuota (2,0 h de reloj) y
     # `--horas 9.5` habria empujado igual, Kaggle la habria cancelado a mitad y se habria
     # repetido el 24-ago. Y la tarea programada del viernes se apoya en este aborto: si la
     # cuota no se ha renovado a las 19:30, tiene que negarse y dejar el intento de las 22:30.
-    lanzar, empujes = _lanzador_simulado(monkeypatch, cuota=(25.41, 4.59), estado_kernel="KernelWorkerStatus.COMPLETE")
+    lanzar, empujes = _lanzador_simulado(monkeypatch, (25.41, 4.59), "KernelWorkerStatus.COMPLETE", tmp_path)
     monkeypatch.setattr(sys, "argv", ["lanzar.py", "--horas", "9.5"])
     assert lanzar.main() == 2
     assert empujes == [], "empujo una tirada de 9,5 h con cuota para 2"
 
     # con la cuota renovada, la misma orden SI lanza
-    lanzar, empujes = _lanzador_simulado(monkeypatch, cuota=(0.0, 30.0), estado_kernel="KernelWorkerStatus.COMPLETE")
+    lanzar, empujes = _lanzador_simulado(monkeypatch, (0.0, 30.0), "KernelWorkerStatus.COMPLETE", tmp_path)
     monkeypatch.setattr(sys, "argv", ["lanzar.py", "--horas", "9.5"])
     assert lanzar.main() == 0
     assert len(empujes) == 1
 
 
-def test_el_lanzador_no_empuja_encima_de_una_corrida_en_marcha(monkeypatch):
+def test_el_lanzador_no_empuja_encima_de_una_corrida_en_marcha(monkeypatch, tmp_path):
     # La tarea del viernes tiene dos intentos (19:30 y 22:30). Si el primero salio, a las
     # 22:30 la cuota restante aun "cabe" y sin esta guarda se empujaria una segunda version:
     # la primera queda huerfana con su cuota gastada.
-    lanzar, empujes = _lanzador_simulado(monkeypatch, cuota=(5.0, 25.0), estado_kernel="KernelWorkerStatus.RUNNING")
+    lanzar, empujes = _lanzador_simulado(monkeypatch, (5.0, 25.0), "KernelWorkerStatus.RUNNING", tmp_path)
     monkeypatch.setattr(sys, "argv", ["lanzar.py", "--horas", "9.5"])
     assert lanzar.main() == 3
     assert empujes == [], "empujo una corrida encima de otra en RUNNING"
+
+
+def test_el_lanzador_no_lanza_a_ciegas_si_no_puede_leer_la_cuota(monkeypatch, tmp_path):
+    # Si `kaggle quota` no se deja leer (paso bajo una tarea programada el 29-ago), antes se
+    # saltaba TODA la comprobacion y se empujaba igual. Un lanzamiento automatico a ciegas
+    # es la forma mas cara de repetir el 24-ago.
+    lanzar, empujes = _lanzador_simulado(monkeypatch, None, "KernelWorkerStatus.COMPLETE", tmp_path)
+    monkeypatch.setattr(sys, "argv", ["lanzar.py", "--horas", "9.5"])
+    assert lanzar.main() == 4
+    assert empujes == [], "empujo sin saber cuanta cuota habia"

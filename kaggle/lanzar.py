@@ -361,6 +361,14 @@ def main() -> int:
     from cuota import lee as lee_cuota
 
     q = lee_cuota()
+    if not q and not args.forzar:
+        # A ciegas NO. Hasta el 3-sep, si la cuota no se podia leer se saltaba toda la
+        # comprobacion y se empujaba igual: justo en el contexto de una tarea programada,
+        # donde el 29-ago el vigia ya no habia podido leerla, un lanzamiento automatico
+        # habria salido con la cuota que fuera.
+        print("NO PUDE LEER LA CUOTA de Kaggle y no se lanza a ciegas. "
+              "Comprueba: python kaggle/cuota.py   (o --forzar)", file=sys.stderr)
+        return 4
     if q:
         usadas, libres = q
         caben = caben_horas(libres)
