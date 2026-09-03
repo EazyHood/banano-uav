@@ -393,7 +393,7 @@ def main() -> int:
     # con la de su última medición (sin esto repetía recogida y GPU cada 30 min).
     marca_lanz = AQUI.parent / "runs_cloud" / ".ultimo_lanzamiento"
     marca_lanz.parent.mkdir(parents=True, exist_ok=True)
-    marca.write_text(f"{kid}\n", encoding="utf-8")
+    marca_lanz.write_text(f"{kid}\n", encoding="utf-8")
 
     print(
         f"\nLanzado. Ya puedes apagar el PC.\n"
