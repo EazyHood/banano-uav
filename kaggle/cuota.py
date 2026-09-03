@@ -7,13 +7,17 @@ límite de 12 h de la sesión, que es otra cosa.
 
 **La cuota se gasta más rápido que el reloj.** Kaggle asigna DOS Tesla T4 —no hay opción de
 una sola cuando pides GPU— y cobra por GPU asignada, no por GPU usada; `cloud/train.py` usa
-una sola desde que se arregló lo del DDP. Medido con tres lecturas de `kaggle quota`:
+una sola desde que se arregló lo del DDP. Medido con lecturas de `kaggle quota`:
 
     24-ago 15:28 -> 21:33 :  6,08 h de reloj, 9,88 h de cuota = 1,62x
     24-ago 21:33 -> 25-ago 10:17 : 12,73 h de reloj, 15,02 h de cuota = 1,18x
+    3-sep, corrida en marcha: 0,67 h de reloj, 1,35 h de cuota = **2,01x**
 
-Se toma 1,7x, el peor caso con margen. Traducido: **las 30 h de cuota semanal son unas
-17 h de reloj**, no 30. Una sesión de 11 h se come dos tercios de la semana.
+Se toma **2,0x**, que además es el techo que tiene sentido: dos GPU cobradas todo el rato.
+Los tramos que salieron más bajos incluían el arranque y la descarga de datos, cuando la
+GPU aún no lleva rato asignada; en pleno entrenamiento el ritmo es 2x y ése es el que hay
+que usar para presupuestar. Traducido: **las 30 h de cuota semanal son unas 14,7 h de
+reloj**, no 30 ni 17. Una sesión de 9,5 h se come dos tercios de la semana.
 
     python kaggle/cuota.py            # cuánto queda y qué cabe
     python kaggle/cuota.py --horas 6  # ¿cabe una tirada de 6 h?
@@ -27,7 +31,7 @@ import sys
 from pathlib import Path
 
 # Peor caso medido, con margen. Si algún día Kaggle deja pedir una sola T4, bajará a ~1.0.
-CUOTA_POR_HORA_DE_RELOJ = 1.7
+CUOTA_POR_HORA_DE_RELOJ = 2.0
 MARGEN_H = 0.3  # para el arranque, la descarga de datos y el guardado final
 
 
